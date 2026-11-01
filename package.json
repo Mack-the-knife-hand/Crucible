@@ -1,0 +1,100 @@
+{
+  "name": "crucible",
+  "version": "1.9.3",
+  "description": "A free, standalone manuscript editor: AI revision desk, prose and continuity passes, story memory, corkboard, timeline, and PDF/Word/EPUB export.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test:unit": "node test/unit.js",
+    "test:smoke": "electron test/smoke.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "vendor": "node -e \"const f=require('fs');f.copyFileSync('node_modules/marked/lib/marked.umd.js','src/vendor/marked.umd.js');f.copyFileSync('node_modules/dompurify/dist/purify.min.js','src/vendor/purify.min.js')\"",
+    "build:web": "node tools/build-web.js",
+    "test:web": "node tools/build-web.js && node test/web.js",
+    "test:setup": "playwright install chromium",
+    "audit:shipped": "node tools/audit-shipped.js",
+    "test:refinement": "node test/refinement.js"
+  },
+  "author": "Mack",
+  "license": "SEE LICENSE IN LICENSE",
+  "devDependencies": {
+    "dompurify": "^3.4.17",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "marked": "^18.1.2",
+    "playwright": "1.63.0"
+  },
+  "productName": "Crucible",
+  "build": {
+    "appId": "com.mack.crucible",
+    "productName": "Crucible",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "build/icon-512.png",
+      "package.json",
+      "dist-web/crucible.html",
+      "THIRD_PARTY_LICENSES.md",
+      "SECURITY.md",
+      "LICENSE"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png"
+    },
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "Markdown manuscript",
+        "role": "Editor"
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    }
+  }
+}

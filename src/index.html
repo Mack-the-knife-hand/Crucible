@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob:; media-src 'self' file: blob:; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'self' about:;">
+  <title>Crucible</title>
+  <link rel="icon" type="image/png" href="img/icon-64.png">
+  <link rel="apple-touch-icon" href="img/icon-128.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ============================== TOP BAR ============================== -->
+  <header id="topbar">
+    <div class="brand"><img class="brand-icon" src="img/icon-64.png" alt="">Crucible</div>
+    <div class="group">
+      <div class="dropdown">
+        <button id="btnFile" title="New, Save as, Backups, recent books">File ▾</button>
+        <div class="menu" id="fileMenu"></div>
+      </div>
+      <button id="btnOpen" title="Open a manuscript (Ctrl+O)">Open</button>
+      <button id="btnSave" title="Save (Ctrl+S)">Save</button>
+      <label class="check autosave-toggle" title="When ticked, Crucible saves your book automatically every 5 minutes (only if something changed).">
+        <input type="checkbox" id="autosaveToggle"> Autosave
+      </label>
+    </div>
+    <div class="group">
+      <div class="seg" id="viewSeg">
+        <button data-view="edit" class="on">Write</button>
+        <button data-view="split">Split</button>
+        <button data-view="preview">Read</button>
+      </div>
+      <div class="seg" id="alignSeg" title="Align the paragraph(s) at the cursor. Shows in Split/Read view and the PDF.">
+        <button data-align="left" class="on" title="Align left (normal)"><svg viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="2" x2="15" y2="2"/><line x1="1" y1="5.5" x2="10" y2="5.5"/><line x1="1" y1="9" x2="15" y2="9"/><line x1="1" y1="12.5" x2="10" y2="12.5"/></svg></button>
+        <button data-align="center" title="Align center"><svg viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="2" x2="15" y2="2"/><line x1="4" y1="5.5" x2="12" y2="5.5"/><line x1="1" y1="9" x2="15" y2="9"/><line x1="4" y1="12.5" x2="12" y2="12.5"/></svg></button>
+        <button data-align="right" title="Align right"><svg viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="2" x2="15" y2="2"/><line x1="6" y1="5.5" x2="15" y2="5.5"/><line x1="1" y1="9" x2="15" y2="9"/><line x1="6" y1="12.5" x2="15" y2="12.5"/></svg></button>
+      </div>
+      <button id="btnFind" title="Find & replace (Ctrl+F)">Find</button>
+      <button id="btnFocus" title="Hide both side panels to declutter (Ctrl+\)">Focus</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="group">
+      <label class="provider-pick" title="Which AI answers in the negotiation box">
+        <span>AI</span>
+        <select id="providerSelect"></select>
+      </label>
+      <button id="btnPackage" title="Package & back up: zip Crucible, your books, music and settings to a location you choose">📦 Package</button>
+      <button id="btnExport" class="accent" title="Export the book as PDF, Word or EPUB">Export</button>
+      <button id="btnTheme" title="Toggle light/dark">Light</button>
+      <button id="btnSettings" title="AI providers & preferences">Settings</button>
+    </div>
+  </header>
+
+  <!-- ============================== MAIN ============================== -->
+  <main id="workspace">
+    <!-- Left: outline / change pool / links -->
+    <aside id="left" class="panel">
+      <nav class="tabs" data-for="left">
+        <button data-tab="outline" class="on">Outline</button>
+        <button data-tab="pool" title="Change pool: passages you've flagged for revision">Pool <span class="badge" id="poolBadge">0</span></button>
+        <button data-tab="notes" title="Margin notes">Notes <span class="badge" id="notesBadge">0</span></button>
+        <button data-tab="links" title="Songs and pictures linked to passages">Links <span class="badge" id="linkBadge">0</span></button>
+        <span class="spacer"></span>
+        <button class="collapse-btn" data-panel="left" title="Hide this panel (Ctrl+[)">«</button>
+      </nav>
+      <div class="rail">
+        <button class="rail-expand" data-panel="left" title="Show panel (Ctrl+[)">»</button>
+        <button class="rail-tab" data-panel="left" data-tab="outline">Outline</button>
+        <button class="rail-tab" data-panel="left" data-tab="pool">Pool <span class="badge" data-mirror="poolBadge">0</span></button>
+        <button class="rail-tab" data-panel="left" data-tab="notes">Notes <span class="badge" data-mirror="notesBadge">0</span></button>
+        <button class="rail-tab" data-panel="left" data-tab="links">Links <span class="badge" data-mirror="linkBadge">0</span></button>
+      </div>
+      <section class="tab on" data-tab="outline">
+        <div class="toolbar">
+          <button id="btnChapters" class="small" title="Name, add, remove, reorder chapters and add chapter images">☰ Chapters</button>
+          <button id="btnCork" class="small" title="Scene cards: drag to reorder scenes">▦ Corkboard</button>
+          <button id="btnTimeline" class="small" title="Scenes in story-time order">⟿ Timeline</button>
+        </div>
+        <div id="outline" class="list"></div>
+      </section>
+      <section class="tab" data-tab="pool">
+        <div class="toolbar">
+          <select id="poolFilter">
+            <option value="open">Open items</option>
+            <option value="all">All items</option>
+            <option value="applied">Applied</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+          <button id="btnNegotiateSel" class="accent small" title="Send checked items to the AI box">Negotiate ✓</button>
+        </div>
+        <div id="poolList" class="list"></div>
+      </section>
+      <section class="tab" data-tab="notes">
+        <div class="toolbar">
+          <select id="notesFilter">
+            <option value="open">Open notes</option>
+            <option value="resolved">Resolved</option>
+            <option value="all">All notes</option>
+          </select>
+          <span class="spacer"></span>
+          <button class="small" id="btnAddNote" title="Add a note on the selection or the paragraph at the cursor (Alt+N)">+ Note</button>
+        </div>
+        <div id="notesList" class="list"></div>
+      </section>
+      <section class="tab" data-tab="links">
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="ambientToggle"> Auto-play song for the passage I'm in</label>
+        </div>
+        <div id="linkList" class="list"></div>
+      </section>
+    </aside>
+
+    <!-- Center: manuscript -->
+    <section id="center">
+      <div id="findBar" class="hidden">
+        <input id="findInput" placeholder="Find…">
+        <input id="replaceInput" placeholder="Replace with…">
+        <label class="check"><input type="checkbox" id="findCase"> Aa</label>
+        <button id="findPrev">↑</button>
+        <button id="findNext">↓</button>
+        <button id="replaceOne">Replace</button>
+        <button id="replaceAll">All</button>
+        <span id="findCount" class="muted"></span>
+        <button id="findClose">✕</button>
+      </div>
+      <div id="editorWrap" data-view="edit">
+        <div id="editorPane">
+          <textarea id="editor" spellcheck="true" placeholder="Open your manuscript (Ctrl+O) or start writing…"></textarea>
+        </div>
+        <div id="previewPane"><article id="preview" class="manuscript"></article></div>
+      </div>
+      <div id="statusbar">
+        <span id="stFile">No file</span>
+        <span id="stDirty" role="status" aria-live="polite"></span>
+        <button id="btnRetrySave" class="small hidden" title="Retry saving the open book">Retry save</button>
+        <span class="spacer"></span>
+        <span id="stNotes" class="hidden" title="Margin notes on this passage"></span>
+        <span id="stLinked" class="hidden"></span>
+        <span id="stChapter"></span>
+        <span id="stGoal" class="st-btn" title="Writing goals"></span>
+        <span id="stRead" class="st-btn" title="Read aloud from the cursor (or the selection)">🔊</span>
+        <span id="stWords">0 words</span>
+        <span id="stSel"></span>
+      </div>
+    </section>
+
+    <!-- Right: AI negotiation / memory -->
+    <aside id="right" class="panel">
+      <nav class="tabs" data-for="right">
+        <button data-tab="ai" class="on">AI desk</button>
+        <button data-tab="prose" title="Correct prose across a selection, chapter or the whole book">Prose pass <span class="badge" id="proseBadge">0</span></button>
+        <button data-tab="memory">Story memory <span class="badge" id="memBadge">0</span></button>
+        <span class="spacer"></span>
+        <button class="collapse-btn" data-panel="right" title="Hide this panel (Ctrl+])">»</button>
+      </nav>
+      <div class="rail">
+        <button class="rail-expand" data-panel="right" title="Show panel (Ctrl+])">«</button>
+        <button class="rail-tab" data-panel="right" data-tab="ai">AI desk</button>
+        <button class="rail-tab" data-panel="right" data-tab="prose">Prose <span class="badge" data-mirror="proseBadge">0</span></button>
+        <button class="rail-tab" data-panel="right" data-tab="memory">Memory <span class="badge" data-mirror="memBadge">0</span></button>
+      </div>
+      <section class="tab on" data-tab="ai">
+        <div id="aiContext"></div>
+        <div id="chatLog"></div>
+        <div id="chatInputWrap">
+          <div class="chat-opts">
+            <label class="check" title="Sends the entire manuscript with every message. Uses many tokens on a long book."><input type="checkbox" id="optFullBook"> Include whole manuscript</label>
+            <label class="check"><input type="checkbox" id="optMemory" checked> Use story memory</label>
+            <button id="btnBeta" class="small ghost" title="Ask a simulated reader (agent, genre fan, editor…) for their reactions">👥 Beta reader</button>
+            <button id="btnNewChat" class="small ghost" title="Start a fresh conversation">New chat</button>
+          </div>
+          <details class="ai-context-help"><summary>What does the AI receive?</summary>
+            <p>Your message and up to 30 recent chat messages; passages on the table with their change-pool notes and nearby text; the outline and opening 1,500 characters, or the whole manuscript when selected.</p>
+            <p>Enabled story-memory notes and selected images are included when Use story memory is checked, subject to its size limit. Margin notes are not sent automatically. Beta reader and Prose pass use their own selected scope.</p>
+            <p>AI is optional. Writing, organizing and exporting do not require an API key.</p>
+          </details>
+          <textarea id="chatInput" placeholder="Tell the AI what to change or add… (Ctrl+Enter to send)"></textarea>
+          <button id="btnSend" class="accent">Send</button>
+        </div>
+      </section>
+      <section class="tab" data-tab="prose">
+        <div class="prose-setup">
+          <div class="prow"><label for="proseScope">Correct</label>
+            <select id="proseScope">
+              <option value="selection">Selected text</option>
+              <option value="chapter">Chapter / scene at cursor</option>
+              <option value="book">Whole book</option>
+            </select></div>
+          <div id="proseScopeInfo" class="muted small"></div>
+          <div class="prow"><label for="proseLevel">How much</label><select id="proseLevel"></select></div>
+          <div id="proseLevelDesc" class="muted small"></div>
+          <textarea id="proseInstr" rows="2" placeholder="Extra instructions (optional), e.g. Keep the narrator's dialect in dialogue. British spelling. Don't touch the robot's clipped speech."></textarea>
+          <div class="prow">
+            <label class="check" title="Sends your story memory with every section (names, style guide). Uses more of the AI's capacity per request."><input type="checkbox" id="proseMemory"> Use story memory</label>
+            <span class="spacer"></span>
+            <button id="proseStart" class="accent small">Correct prose</button>
+          </div>
+        </div>
+        <div id="proseStatus"></div>
+        <div class="toolbar hidden" id="proseBar">
+          <select id="proseFilter">
+            <option value="pending">To review</option>
+            <option value="accepted">Accepted</option>
+            <option value="skipped">Skipped</option>
+            <option value="other">Couldn't place</option>
+            <option value="all">All</option>
+          </select>
+          <span class="spacer"></span>
+          <button id="proseAcceptAll" class="small accent">Accept all</button>
+          <button id="proseClear" class="small ghost">Clear</button>
+        </div>
+        <div id="proseList" class="list"></div>
+      </section>
+      <section class="tab" data-tab="memory">
+        <div class="toolbar">
+          <button id="btnAddMemory" class="small">+ Photos / files</button>
+          <button id="btnNewNote" class="small">+ New note</button>
+          <button id="btnImportData" class="small" title="Import a CSV, TSV or JSON file (characters, places, glossary…) as notes">+ Import data</button>
+          <input id="memSearch" placeholder="Filter…">
+        </div>
+        <div id="memMeter"></div>
+        <div id="memList" class="list"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="readBar" class="hidden">
+    <span>🔊 Reading aloud</span>
+    <span id="rdInfo" class="muted"></span>
+    <span class="spacer"></span>
+    <select id="rdVoice" title="Voice"></select>
+    <select id="rdRate" title="Speed">
+      <option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option>
+      <option value="1.15">1.15×</option><option value="1.3">1.3×</option><option value="1.5">1.5×</option>
+    </select>
+    <button id="rdPause" class="small">❚❚ Pause</button>
+    <button id="rdStop" class="small">■ Stop</button>
+  </div>
+
+  <!-- ============================== PLAYER ============================== -->
+  <footer id="player">
+    <div class="pl-controls">
+      <button id="plPrev" title="Previous">⏮</button>
+      <button id="plPlay" class="play" title="Play / pause">▶</button>
+      <button id="plNext" title="Next">⏭</button>
+      <button id="plShuffle" title="Shuffle">⤮</button>
+      <button id="plRepeat" title="Repeat">↻</button>
+    </div>
+    <div class="pl-track">
+      <div id="plTitle">No song loaded</div>
+      <div class="pl-seek">
+        <span id="plCur">0:00</span>
+        <input type="range" id="plSeek" min="0" max="1000" value="0">
+        <span id="plDur">0:00</span>
+      </div>
+    </div>
+    <div class="pl-right">
+      <input type="range" id="plVol" min="0" max="1" step="0.01" title="Volume">
+      <button id="plListBtn" title="Playlist">☰ Playlist</button>
+    </div>
+    <audio id="audio" preload="metadata"></audio>
+  </footer>
+
+  <div id="playlistPanel" class="hidden">
+    <div class="toolbar">
+      <strong>Playlist</strong>
+      <span class="spacer"></span>
+      <button id="plAddFiles" class="small">+ Songs</button>
+      <button id="plAddFolder" class="small">+ Folder</button>
+      <button id="plClear" class="small ghost">Clear</button>
+    </div>
+    <div id="playlist" class="list"></div>
+  </div>
+
+  <!-- ============================== OVERLAYS ============================== -->
+  <div id="ctxMenu" class="hidden"></div>
+  <div id="modalRoot"></div>
+  <div id="toast"></div>
+
+  <script src="vendor/marked.umd.js"></script>
+  <script src="vendor/purify.min.js"></script>
+  <script src="js/settings-core.js"></script>
+  <script src="js/zip.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/platform-web.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/pool.js"></script>
+  <script src="js/memory.js"></script>
+  <script src="js/prose.js"></script>
+  <script src="js/chapters.js"></script>
+  <script src="js/scenes.js"></script>
+  <script src="js/package.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/links.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/goals.js"></script>
+  <script src="js/beta.js"></script>
+  <script src="js/dataimport.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/docexport.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

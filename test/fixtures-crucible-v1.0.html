@@ -1,0 +1,3399 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; font-src data:; connect-src https: http:; frame-src 'self' about: blob:">
+  <title>Crucible</title>
+  <meta name="generator" content="Crucible 1.0.0 (browser edition)">
+  <style>
+/* =============================================================================
+   Crucible — styles
+   Theme: a forge. Charcoal and soot, with ember orange for anything "hot"
+   (AI actions, pending changes). Light theme is warm parchment.
+   ============================================================================= */
+
+:root {
+  --bg: #17151a;
+  --bg-2: #1e1b21;
+  --panel: #221f26;
+  --panel-2: #2a2630;
+  --line: #36313d;
+  --text: #e9e3da;
+  --muted: #9b93a3;
+  --ember: #e8743b;
+  --ember-2: #f4a259;
+  --ember-glow: rgba(232, 116, 59, 0.18);
+  --ok: #7fb685;
+  --warn: #e3b448;
+  --bad: #d9665b;
+  --sel: rgba(244, 162, 89, 0.32);
+  --mark: rgba(244, 162, 89, 0.45);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  --editor-size: 17px;
+  --radius: 7px;
+}
+
+[data-theme="light"] {
+  --bg: #efe8dc;
+  --bg-2: #f6f1e8;
+  --panel: #f9f5ee;
+  --panel-2: #efe7da;
+  --line: #d9cdbb;
+  --text: #2b241d;
+  --muted: #7a6d5f;
+  --ember: #c4541f;
+  --ember-2: #b8661f;
+  --ember-glow: rgba(196, 84, 31, 0.12);
+  --sel: rgba(196, 84, 31, 0.22);
+  --mark: rgba(196, 84, 31, 0.3);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13.5px/1.45 var(--sans);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 5px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+button.accent { background: var(--ember); border-color: var(--ember); color: #1a1208; font-weight: 600; }
+button.accent:hover { background: var(--ember-2); border-color: var(--ember-2); }
+button.ghost { background: transparent; }
+button.small { padding: 3px 8px; font-size: 12px; }
+button.danger { color: var(--bad); }
+input, select, textarea {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+}
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--ember); outline-offset: -1px; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.spacer { flex: 1; }
+.check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+.check input { margin: 0; accent-color: var(--ember); }
+
+/* ---------------------------------------------------------------- top bar */
+#topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.brand { font: 600 17px var(--serif); letter-spacing: .04em; display: flex; align-items: center; gap: 8px; margin-right: 6px; }
+.ember {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffd27a, var(--ember) 55%, #7a2a0c);
+  box-shadow: 0 0 10px var(--ember);
+}
+.group { display: flex; align-items: center; gap: 5px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; }
+.seg button.on { background: var(--ember-glow); color: var(--ember-2); }
+.provider-pick { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.provider-pick select { max-width: 190px; }
+.dropdown { position: relative; }
+.dropdown .menu {
+  display: none; position: absolute; top: 110%; left: 0; z-index: 50; min-width: 320px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.dropdown.open .menu { display: block; }
+.menu .mi { padding: 6px 9px; border-radius: 5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu .mi:hover { background: var(--ember-glow); }
+
+/* -------------------------------------------------------------- workspace */
+#workspace {
+  display: grid;
+  grid-template-columns: 290px 1fr 390px;
+  min-height: 0;
+}
+.panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+#workspace > * { min-width: 0; }
+#left { border-right: 1px solid var(--line); }
+#right { border-left: 1px solid var(--line); }
+.tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 6px; }
+.tabs button {
+  border: 0; border-radius: 0; background: transparent; color: var(--muted);
+  padding: 9px 10px 8px; border-bottom: 2px solid transparent;
+}
+.tabs button.on { color: var(--text); border-bottom-color: var(--ember); }
+.badge {
+  display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 3px;
+  border-radius: 9px; background: var(--panel-2); color: var(--muted); font-size: 11px; text-align: center;
+}
+.tabs button.on .badge { background: var(--ember-glow); color: var(--ember-2); }
+.tab { display: none; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.tab.on { display: flex; }
+.toolbar { display: flex; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.toolbar input:not([type="checkbox"]):not([type="radio"]) { flex: 1; min-width: 80px; }
+.toolbar .check { line-height: 1.3; }
+.list { overflow-y: auto; flex: 1; padding: 6px; }
+.empty { color: var(--muted); padding: 18px 12px; text-align: center; font-size: 12.5px; line-height: 1.6; }
+
+/* outline */
+.ol-item { padding: 4px 8px; border-radius: 5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ol-item:hover { background: var(--panel-2); }
+.ol-item.cur { background: var(--ember-glow); color: var(--ember-2); }
+.ol-item .wc { float: right; color: var(--muted); font-size: 11px; margin-left: 6px; }
+.ol-1 { font-weight: 600; }
+.ol-2 { padding-left: 20px; }
+.ol-3 { padding-left: 34px; color: var(--muted); }
+
+/* cards (pool, links, memory) */
+.card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 9px;
+  margin-bottom: 7px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.card.pending { border-left-color: var(--ember); }
+.card.negotiating { border-left-color: var(--warn); }
+.card.applied { border-left-color: var(--ok); opacity: .8; }
+.card.dismissed { opacity: .5; }
+.card.missing { border-left-color: var(--bad); }
+.card .row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.card .row > .tag:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.card .snippet {
+  font: 13px/1.5 var(--serif);
+  max-height: 4.6em; overflow: hidden;
+  margin: 4px 0; cursor: pointer;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.card .note { font-size: 12px; color: var(--muted); font-style: italic; }
+.card .actions { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.card .tag { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.card .tag.st-pending { color: var(--ember-2); }
+.card .tag.st-applied { color: var(--ok); }
+.card .tag.st-missing { color: var(--bad); }
+.card .tag.st-negotiating { color: var(--warn); }
+
+/* ----------------------------------------------------------------- editor */
+#center { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+#findBar { display: flex; gap: 5px; align-items: center; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+#findBar input { width: 190px; }
+#editorWrap { flex: 1; display: grid; min-height: 0; }
+#editorWrap[data-view="edit"] { grid-template-columns: 1fr; }
+#editorWrap[data-view="edit"] #previewPane { display: none; }
+#editorWrap[data-view="preview"] #editorPane { display: none; }
+#editorWrap[data-view="split"] { grid-template-columns: 1fr 1fr; }
+#editorWrap[data-view="split"] #previewPane { border-left: 1px solid var(--line); }
+#editorPane, #previewPane { min-height: 0; overflow: hidden; display: flex; }
+#editor {
+  flex: 1;
+  border: 0; border-radius: 0; resize: none;
+  background: var(--bg);
+  padding: 44px max(6%, calc((100% - 74ch) / 2)) 40vh;
+  font: var(--editor-size)/1.75 var(--serif);
+  tab-size: 4;
+  outline: none;
+  caret-color: var(--ember);
+}
+#editor::selection { background: var(--sel); }
+#editor:focus { outline: none; }
+#previewPane { overflow-y: auto; display: block; }
+
+.manuscript {
+  max-width: 68ch; margin: 0 auto; padding: 44px 6% 30vh;
+  font: var(--editor-size)/1.75 var(--serif);
+}
+.manuscript h1 { font-size: 1.9em; text-align: center; margin: 2.2em 0 1em; font-weight: 500; letter-spacing: .02em; }
+.manuscript h2 { font-size: 1.4em; margin: 1.8em 0 .7em; font-weight: 500; }
+.manuscript h3 { font-size: 1.15em; margin: 1.5em 0 .5em; }
+.manuscript p { margin: 0 0 .9em; }
+.manuscript hr { border: 0; text-align: center; margin: 2em 0; }
+.manuscript hr::after { content: "*   *   *"; color: var(--muted); letter-spacing: .3em; }
+.manuscript blockquote { border-left: 3px solid var(--line); margin: 1em 0; padding: 0 1em; color: var(--muted); }
+.manuscript img { max-width: 100%; }
+
+#statusbar {
+  display: flex; gap: 16px; align-items: center;
+  padding: 4px 12px; font-size: 12px; color: var(--muted);
+  background: var(--panel); border-top: 1px solid var(--line);
+}
+#stDirty { color: var(--ember-2); }
+#stLinked { color: var(--ember-2); cursor: pointer; }
+
+/* ------------------------------------------------------------------- AI */
+#aiContext { padding: 8px; border-bottom: 1px solid var(--line); max-height: 34%; overflow-y: auto; }
+#aiContext:empty { display: none; }
+.ctx-head { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; display: flex; }
+.ctx-item {
+  font: 12.5px/1.45 var(--serif); padding: 6px 8px; margin-bottom: 5px;
+  border-radius: 5px; background: var(--ember-glow); border: 1px solid transparent;
+  display: flex; gap: 6px;
+}
+.ctx-item .t { flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.ctx-item button { padding: 0 6px; height: 20px; font-size: 11px; }
+#chatLog { flex: 1; overflow-y: auto; padding: 10px; }
+.msg { margin-bottom: 12px; }
+.msg .who { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 3px; }
+.msg.user .body { background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; white-space: pre-wrap; }
+.msg.assistant .body { line-height: 1.55; }
+.msg.assistant .body p { margin: 0 0 .6em; }
+.msg.assistant .body pre { background: var(--bg-2); padding: 8px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
+.msg.error .body { color: var(--bad); }
+.msg.thinking .body::after { content: "…"; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+
+.revision {
+  border: 1px solid var(--ember); border-radius: var(--radius);
+  margin: 8px 0; overflow: hidden; background: var(--bg-2);
+}
+.revision .rv-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--ember-glow); font-size: 12px; }
+.revision .rv-body { padding: 8px 10px; font: 13.5px/1.6 var(--serif); white-space: pre-wrap; }
+.revision .rv-diff { padding: 8px 10px; font: 13.5px/1.6 var(--serif); white-space: pre-wrap; border-top: 1px dashed var(--line); }
+.revision del { background: rgba(217,102,91,.22); color: var(--bad); text-decoration: line-through; }
+.revision ins { background: rgba(127,182,133,.22); color: var(--ok); text-decoration: none; }
+.revision.applied { border-color: var(--ok); }
+.revision.applied .rv-head { background: rgba(127,182,133,.15); }
+
+#chatInputWrap { border-top: 1px solid var(--line); padding: 8px; display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.chat-opts { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.chat-opts button { margin-left: auto; }
+#chatInput { height: 76px; resize: vertical; }
+#btnSend { align-self: end; }
+
+/* ---------------------------------------------------------------- memory */
+.mem-thumb { width: 100%; max-height: 150px; object-fit: cover; border-radius: 5px; cursor: zoom-in; margin: 4px 0; display: block; }
+.card textarea { width: 100%; resize: vertical; font-size: 12px; margin-top: 4px; }
+.card input.tags { width: 100%; font-size: 12px; margin-top: 4px; }
+.card .name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- player */
+#player {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center;
+  padding: 7px 14px; background: var(--panel); border-top: 1px solid var(--line);
+}
+.pl-controls { display: flex; gap: 4px; }
+.pl-controls button { width: 34px; height: 30px; padding: 0; background: transparent; }
+.pl-controls button.play { background: var(--ember); color: #1a1208; border-color: var(--ember); }
+.pl-controls button.on { color: var(--ember-2); border-color: var(--ember); }
+.pl-track { min-width: 0; }
+#plTitle { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-seek { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.pl-seek input { flex: 1; }
+.pl-right { display: flex; align-items: center; gap: 8px; }
+#plVol { width: 100px; }
+input[type="range"] { accent-color: var(--ember); padding: 0; border: 0; background: transparent; }
+#playlistPanel {
+  position: fixed; right: 14px; bottom: 58px; width: 400px; max-height: 55vh; z-index: 40;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  display: flex; flex-direction: column; box-shadow: 0 16px 40px rgba(0,0,0,.4);
+}
+.pl-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.pl-item:hover { background: var(--panel-2); }
+.pl-item.cur { color: var(--ember-2); background: var(--ember-glow); }
+.pl-item .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-item button { padding: 0 6px; height: 20px; font-size: 11px; opacity: 0; }
+.pl-item:hover button { opacity: 1; }
+
+/* ---------------------------------------------------------- context menu */
+#ctxMenu {
+  position: fixed; z-index: 100; min-width: 230px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px; box-shadow: 0 12px 34px rgba(0,0,0,.45);
+}
+#ctxMenu .mi { padding: 6px 10px; border-radius: 5px; cursor: pointer; display: flex; gap: 8px; }
+#ctxMenu .mi:hover { background: var(--ember-glow); }
+#ctxMenu .mi.hot { color: var(--ember-2); }
+#ctxMenu .mi .k { margin-left: auto; color: var(--muted); font-size: 11px; }
+#ctxMenu .sep { height: 1px; background: var(--line); margin: 4px 2px; }
+#ctxMenu .mi.disabled { opacity: .4; pointer-events: none; }
+
+/* ----------------------------------------------------------------- modal */
+.modal-back {
+  position: fixed; inset: 0; z-index: 200; background: rgba(10,8,12,.55);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  width: min(640px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0,0,0,.5);
+}
+.modal.wide { width: min(980px, 95vw); }
+.modal header { padding: 14px 18px 8px; font: 600 16px var(--serif); display: flex; align-items: center; }
+.modal .mbody { padding: 6px 18px 14px; overflow-y: auto; }
+.modal footer { padding: 10px 18px 14px; display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--line); }
+.field { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; margin: 8px 0; }
+.field label { color: var(--muted); }
+.field .hint { grid-column: 2; font-size: 11.5px; color: var(--muted); margin-top: -4px; }
+.prov-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--bg-2); }
+.prov-card.active { border-color: var(--ember); }
+.lightbox img { max-width: 90vw; max-height: 82vh; display: block; border-radius: 6px; }
+.lightbox { background: transparent; border: 0; box-shadow: none; width: auto; align-items: center; }
+.lightbox .cap { color: #eee; margin-top: 8px; text-align: center; }
+.pick-list .mi { padding: 7px 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 8px; }
+.pick-list .mi:hover { background: var(--ember-glow); border-color: var(--line); }
+.pick-list img { width: 48px; height: 36px; object-fit: cover; border-radius: 4px; }
+.backup-view { display: grid; grid-template-columns: 260px 1fr; gap: 10px; height: 60vh; }
+.backup-view pre { margin: 0; overflow: auto; background: var(--bg-2); padding: 10px; border-radius: 6px; font: 12.5px/1.5 var(--serif); white-space: pre-wrap; }
+
+/* ----------------------------------------------------------------- toast */
+#toast {
+  position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%) translateY(20px);
+  background: var(--panel-2); border: 1px solid var(--line); padding: 8px 16px; border-radius: 20px;
+  opacity: 0; pointer-events: none; transition: all .2s; z-index: 300;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.err { border-color: var(--bad); color: var(--bad); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 1250px) {
+  #workspace { grid-template-columns: 240px 1fr 330px; }
+}
+
+</style>
+</head>
+<body>
+  <!-- ============================== TOP BAR ============================== -->
+  <header id="topbar">
+    <div class="brand"><span class="ember"></span>Crucible</div>
+    <div class="group">
+      <button id="btnNew" title="New manuscript">New</button>
+      <button id="btnOpen" title="Open a Markdown manuscript (Ctrl+O)">Open book</button>
+      <div class="dropdown">
+        <button id="btnRecent" title="Recent books">▾</button>
+        <div class="menu" id="recentMenu"></div>
+      </div>
+      <button id="btnSave" title="Save (Ctrl+S)">Save</button>
+      <button id="btnSaveAs" title="Save to a new file">Save as</button>
+      <button id="btnBackups" title="Restore an earlier version">Backups</button>
+      <button id="btnDownload" class="hidden" title="Download a copy of the manuscript (.md)">Download .md</button>
+    </div>
+    <div class="group">
+      <div class="seg" id="viewSeg">
+        <button data-view="edit" class="on">Write</button>
+        <button data-view="split">Split</button>
+        <button data-view="preview">Read</button>
+      </div>
+      <button id="btnFind" title="Find & replace (Ctrl+F)">Find</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="group">
+      <label class="provider-pick" title="Which AI answers in the negotiation box">
+        <span>AI</span>
+        <select id="providerSelect"></select>
+      </label>
+      <button id="btnExport" class="accent" title="Export the book as a PDF">Export PDF</button>
+      <button id="btnTheme" title="Toggle light/dark">Light</button>
+      <button id="btnSettings" title="AI providers & preferences">Settings</button>
+    </div>
+  </header>
+
+  <!-- ============================== MAIN ============================== -->
+  <main id="workspace">
+    <!-- Left: outline / change pool / links -->
+    <aside id="left" class="panel">
+      <nav class="tabs" data-for="left">
+        <button data-tab="outline" class="on">Outline</button>
+        <button data-tab="pool">Change pool <span class="badge" id="poolBadge">0</span></button>
+        <button data-tab="links">Links <span class="badge" id="linkBadge">0</span></button>
+      </nav>
+      <section class="tab on" data-tab="outline">
+        <div id="outline" class="list"></div>
+      </section>
+      <section class="tab" data-tab="pool">
+        <div class="toolbar">
+          <select id="poolFilter">
+            <option value="open">Open items</option>
+            <option value="all">All items</option>
+            <option value="applied">Applied</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+          <button id="btnNegotiateSel" class="accent small" title="Send checked items to the AI box">Negotiate ✓</button>
+        </div>
+        <div id="poolList" class="list"></div>
+      </section>
+      <section class="tab" data-tab="links">
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="ambientToggle"> Auto-play song for the passage I'm in</label>
+        </div>
+        <div id="linkList" class="list"></div>
+      </section>
+    </aside>
+
+    <!-- Center: manuscript -->
+    <section id="center">
+      <div id="findBar" class="hidden">
+        <input id="findInput" placeholder="Find…">
+        <input id="replaceInput" placeholder="Replace with…">
+        <label class="check"><input type="checkbox" id="findCase"> Aa</label>
+        <button id="findPrev">↑</button>
+        <button id="findNext">↓</button>
+        <button id="replaceOne">Replace</button>
+        <button id="replaceAll">All</button>
+        <span id="findCount" class="muted"></span>
+        <button id="findClose">✕</button>
+      </div>
+      <div id="editorWrap" data-view="edit">
+        <div id="editorPane">
+          <textarea id="editor" spellcheck="true" placeholder="Open your manuscript (Ctrl+O) or start writing…"></textarea>
+        </div>
+        <div id="previewPane"><article id="preview" class="manuscript"></article></div>
+      </div>
+      <div id="statusbar">
+        <span id="stFile">No file</span>
+        <span id="stDirty"></span>
+        <span class="spacer"></span>
+        <span id="stLinked" class="hidden"></span>
+        <span id="stChapter"></span>
+        <span id="stWords">0 words</span>
+        <span id="stSel"></span>
+      </div>
+    </section>
+
+    <!-- Right: AI negotiation / memory -->
+    <aside id="right" class="panel">
+      <nav class="tabs" data-for="right">
+        <button data-tab="ai" class="on">AI desk</button>
+        <button data-tab="memory">Story memory <span class="badge" id="memBadge">0</span></button>
+      </nav>
+      <section class="tab on" data-tab="ai">
+        <div id="aiContext"></div>
+        <div id="chatLog"></div>
+        <div id="chatInputWrap">
+          <div class="chat-opts">
+            <label class="check" title="Sends the entire manuscript with every message. Uses many tokens on a long book."><input type="checkbox" id="optFullBook"> Include whole manuscript</label>
+            <label class="check"><input type="checkbox" id="optMemory" checked> Use story memory</label>
+            <button id="btnNewChat" class="small ghost" title="Start a fresh conversation">New chat</button>
+          </div>
+          <textarea id="chatInput" placeholder="Tell the AI what you want changed… (Ctrl+Enter to send)"></textarea>
+          <button id="btnSend" class="accent">Send</button>
+        </div>
+      </section>
+      <section class="tab" data-tab="memory">
+        <div class="toolbar">
+          <button id="btnAddMemory" class="small">+ Photos / files</button>
+          <button id="btnNewNote" class="small">+ New note</button>
+          <input id="memSearch" placeholder="Filter…">
+        </div>
+        <div id="memList" class="list"></div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ============================== PLAYER ============================== -->
+  <footer id="player">
+    <div class="pl-controls">
+      <button id="plPrev" title="Previous">⏮</button>
+      <button id="plPlay" class="play" title="Play / pause">▶</button>
+      <button id="plNext" title="Next">⏭</button>
+      <button id="plShuffle" title="Shuffle">⤮</button>
+      <button id="plRepeat" title="Repeat">↻</button>
+    </div>
+    <div class="pl-track">
+      <div id="plTitle">No song loaded</div>
+      <div class="pl-seek">
+        <span id="plCur">0:00</span>
+        <input type="range" id="plSeek" min="0" max="1000" value="0">
+        <span id="plDur">0:00</span>
+      </div>
+    </div>
+    <div class="pl-right">
+      <input type="range" id="plVol" min="0" max="1" step="0.01" title="Volume">
+      <button id="plListBtn" title="Playlist">☰ Playlist</button>
+    </div>
+    <audio id="audio" preload="metadata"></audio>
+  </footer>
+
+  <div id="playlistPanel" class="hidden">
+    <div class="toolbar">
+      <strong>Playlist</strong>
+      <span class="spacer"></span>
+      <button id="plAddFiles" class="small">+ Songs</button>
+      <button id="plAddFolder" class="small">+ Folder</button>
+      <button id="plClear" class="small ghost">Clear</button>
+    </div>
+    <div id="playlist" class="list"></div>
+  </div>
+
+  <!-- ============================== OVERLAYS ============================== -->
+  <div id="ctxMenu" class="hidden"></div>
+  <div id="modalRoot"></div>
+  <div id="toast"></div>
+
+  <script>/* vendor/marked.umd.js */
+/**
+ * marked v18.1.2 - a markdown parser
+ * Copyright (c) 2018-2026, MarkedJS. (MIT License)
+ * Copyright (c) 2011-2018, Christopher Jeffrey. (MIT License)
+ * https://github.com/markedjs/marked
+ */
+
+/**
+ * DO NOT EDIT THIS FILE
+ * The code in this file is generated from files in ./src/
+ */
+(function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f()}else if("function"==typeof define && define.amd){define("marked",f)}else {g["marked"]=f()}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(){var exports={};var __exports=exports;var module={exports};
+"use strict";var ee=Object.defineProperty;var Ee=Object.getOwnPropertyDescriptor;var Ie=Object.getOwnPropertyNames;var Be=Object.prototype.hasOwnProperty;var De=(a,e)=>{for(var t in e)ee(a,t,{get:e[t],enumerable:!0})},qe=(a,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of Ie(e))!Be.call(a,s)&&s!==t&&ee(a,s,{get:()=>e[s],enumerable:!(n=Ee(e,s))||n.enumerable});return a};var Ze=a=>qe(ee({},"__esModule",{value:!0}),a);var Ft={};De(Ft,{Hooks:()=>L,Lexer:()=>O,Marked:()=>Q,Parser:()=>w,Renderer:()=>$,TextRenderer:()=>z,Tokenizer:()=>_,defaults:()=>P,getDefaults:()=>I,lexer:()=>jt,marked:()=>m,options:()=>Zt,parse:()=>Nt,parseInline:()=>Gt,parser:()=>Qt,setOptions:()=>vt,use:()=>Ae,walkTokens:()=>Ht});module.exports=Ze(Ft);function I(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var P=I();function te(a){P=a}var D={exec:()=>null};function B(a){let e=[];return t=>{let n=Math.max(0,Math.min(3,t-1)),s=e[n];return s||(s=a(n),e[n]=s),s}}function c(a,e=""){let t=typeof a=="string"?a:a.source,n={replace:(s,r)=>{let o=typeof r=="string"?r:r.source;return o=o.replace(T.caret,"$1"),t=t.replace(s,o),n},getRegex:()=>new RegExp(t,e)};return n}var ve=((a="")=>{try{return!!new RegExp("(?<=1)(?<!1)"+a)}catch{return!1}})(),T={codeRemoveIndent:/^(?: {0,3}\t| {1,4})/gm,outputLinkReplace:/\\([\[\]])/g,indentCodeCompensation:/^(\s+)(?:```)/,beginningSpace:/^\s+/,endingHash:/#$/,startingSpaceChar:/^ /,endingSpaceChar:/ $/,endingSpaceTabChar:/[ \t]$/,nonSpaceChar:/[^ ]/,newLineCharGlobal:/\n/g,tabCharGlobal:/\t/g,leadingSpaceTab:/^[ \t]+/,multipleSpaceGlobal:/\s+/g,blankLine:/^[ \t]*$/,doubleBlankLine:/\n[ \t]*\n[ \t]*$/,blockquoteStart:/^ {0,3}>/,blockquoteSetextReplace:/\n {0,3}((?:=+|-+) *)(?=\n|$)/g,blockquoteSetextReplace2:/^ {0,3}>[ \t]?/gm,blockquoteMarkerWhitespace:/^( {0,3}>)([ \t]+)/gm,listReplaceNesting:/^ {1,4}(?=( {4})*[^ ])/g,listIsTask:/^\[[ xX]\] +\S/,listReplaceTask:/^\[[ xX]\] +/,listTaskCheckbox:/\[[ xX]\]/,anyLine:/\n.*\n/,hrefBrackets:/^<(.*)>$/,tableDelimiter:/[:|]/,tableAlignChars:/^\||\| *$/g,tableRowBlankLine:/\n[ \t]*$/,tableAlignRight:/^ *-+: *$/,tableAlignCenter:/^ *:-+: *$/,tableAlignLeft:/^ *:-+ *$/,startATag:/^<a /i,endATag:/^<\/a>/i,startPreScriptTag:/^<(pre|code|kbd|script)(\s|>)/i,endPreScriptTag:/^<\/(pre|code|kbd|script)(\s|>)/i,startAngleBracket:/^</,endAngleBracket:/>$/,pedanticHrefTitle:/^([^'"]*[^\s])\s+(['"])(.*)\2/,unicodeAlphaNumeric:/[\p{L}\p{N}]/u,numericCharacterReference:/&#(?:(\d{1,7})|[Xx]([A-Fa-f0-9]{1,6}));/,numericCharacterReferenceOrAmpersand:/&#(?:(\d{1,7})|[Xx]([A-Fa-f0-9]{1,6}));|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,escapeTest:/[&<>"']/,escapeReplace:/[&<>"']/g,escapeTestNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,escapeReplaceNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,caret:/(^|[^\[])\^/g,percentDecode:/%25/g,findPipe:/\|/g,splitPipe:/ \|/,slashPipe:/\\\|/g,carriageReturn:/\r\n|\r/g,spaceLine:/^ +$/gm,notSpaceStart:/^\S*/,endingNewline:/\n$/,listItemRegex:a=>new RegExp(`^( {0,3}${a})((?:[	 ][^\\n]*)?(?:\\n|$))`),nextBulletRegex:B(a=>new RegExp(`^ {0,${a}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`)),hrRegex:B(a=>new RegExp(`^ {0,${a}}((?:-[ 	]*){3,}|(?:_[ 	]*){3,}|(?:\\*[ 	]*){3,})(?:\\n+|$)`)),fencesBeginRegex:B(a=>new RegExp(`^ {0,${a}}(?:\`\`\`|~~~)`)),headingBeginRegex:B(a=>new RegExp(`^ {0,${a}}#{1,6}(?:\\s|$)`)),pedanticHeadingBeginRegex:B(a=>new RegExp(`^ {0,${a}}#`)),htmlBeginRegex:B(a=>new RegExp(`^ {0,${a}}(?:</?(?:${W})(?: +|$|/?>)|<(?:(?:script|pre|style|textarea)(?:[\\s>]|$)|!--)|<\\?|<![A-Za-z]|<!\\[CDATA\\[)`,"i")),blockquoteBeginRegex:B(a=>new RegExp(`^ {0,${a}}>`))},He=/^(?:[ \t]*(?:\n|$))+/,Ge=/^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/,Ne=/^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,K=/^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,Qe=/^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,re=/ {0,3}(?:[*+-]|\d{1,9}[.)])/,xe=/^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |fences|blockquote|heading|hr|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,be=c(xe).replace(/bull/g,re).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}(?:\s|$)/).replace(/hr/g,/ {0,3}(?:(?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/\|table/g,"").getRegex(),je=c(xe).replace(/bull/g,re).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}(?:\s|$)/).replace(/hr/g,/ {0,3}(?:(?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/table/g,/ {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(),se=/^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table|[ \t]+\n)[^\n]+)*)/,Fe=/^[^\n]+/,ie=/(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/,Ue=c(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label",ie).replace("title",/(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(),Ke=c(/^(bull)([ \t][^\n]*?)?(?:\n|$)/).replace(/bull/g,re).getRegex(),W="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul",oe=/<!--(?:-?>|[\s\S]*?(?:-->|$))/,We=c("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n*|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>[^\\n]*\\n*|$)|<![A-Z][\\s\\S]*?(?:>[^\\n]*\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>[^\\n]*\\n*|$)|</?(tag)(?:[ \\t]+|\\n|/?>|$)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!(?:script|pre|style|textarea)(?![a-z0-9-]))([a-z][a-z0-9-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</[a-z][a-z0-9-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))","i").replace("comment",oe).replace("tag",W).replace("attribute",/ +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(),Re=a=>c(se).replace("hr",K).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("|table","").replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*(?:\\n|$))|~~~)[^\\n]*(?:\\n|$)").replace("list",a).replace("html"," {0,3}(?:</?(?:tag)(?: +|\\n|/?>)|<(?:(?:script|pre|style|textarea)(?:[\\s>]|$)|!--)|<\\?|<![A-Za-z]|<!\\[CDATA\\[)").replace("tag",W).getRegex(),Xe=Re(/ {0,3}(?:[*+-]|1[.)])[ \t]+[^ \t\n]/),Ve=Re(/ {0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]|\n|$)/),Je=c(/^( {0,3}> ?(?:(?![ \t]*(?:\n|$))(paragraph)|[^\n]*)(?:\n|$))+/).replace("paragraph",Ve).getRegex(),ae={blockquote:Je,code:Ge,def:Ue,fences:Ne,heading:Qe,hr:K,html:We,lheading:be,list:Ke,newline:He,paragraph:Xe,table:D,text:Fe},ge=c("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr",K).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("blockquote"," {0,3}>").replace("code","(?: {4}| {0,3}	)[^\\n]").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*(?:\\n|$))|~~~)[^\\n]*(?:\\n|$)").replace("list"," {0,3}(?:[*+-]|1[.)])[ \\t]").replace("html"," {0,3}(?:</?(?:tag)(?: +|\\n|/?>)|<(?:(?:script|pre|style|textarea)(?:[\\s>]|$)|!--)|<\\?|<![A-Za-z]|<!\\[CDATA\\[)").replace("tag",W).getRegex(),Ye={...ae,lheading:je,table:ge,paragraph:c(se).replace("hr",K).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("table",ge).replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*(?:\\n|$))|~~~)[^\\n]*(?:\\n|$)").replace("list"," {0,3}(?:[*+-]|1[.)])[ \\t]+[^ \\t\\n]").replace("html"," {0,3}(?:</?(?:tag)(?: +|\\n|/?>)|<(?:(?:script|pre|style|textarea)(?:[\\s>]|$)|!--)|<\\?|<![A-Za-z]|<!\\[CDATA\\[)").replace("tag",W).getRegex()},et={...ae,html:c(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment",oe).replace(/tag/g,"(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),def:/^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,heading:/^(#{1,6})(.*)(?:\n+|$)/,fences:D,lheading:/^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,paragraph:c(se).replace("hr",K).replace("heading",` *#{1,6} *[^
+]`).replace("lheading",be).replace("|table","").replace("blockquote"," {0,3}>").replace("|fences","").replace("|list","").replace("|html","").replace("|tag","").getRegex()},tt=/^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,nt=/^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,Te=/^( {2,}|\\)\n(?!\s*$)[ \t]*/,rt=/^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,A=/[\p{P}\p{S}]/u,H=/[\s\p{P}\p{S}]/u,X=/[^\s\p{P}\p{S}]/u,st=c(/^((?![*_])punctSpace)/,"u").replace(/punctSpace/g,H).getRegex(),it=/[\p{Pi}\p{Ps}"']/u,Oe=/(?!~)[\p{P}\p{S}]/u,ot=/(?!~)[\s\p{P}\p{S}]/u,at=/(?:[^\s\p{P}\p{S}]|~)/u,lt=c(/link|precode-code|html/,"g").replace("link",/\[(?:[^\[\]`]|(?<a>`+)[^`]+\k<a>(?!`))*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)/).replace("precode-",ve?"(?<!`)()":"(^^|[^`])").replace("code",/(?<b>`+)[^`]+\k<b>(?!`)/).replace("html",/<(?! )[^<>]*?>/).getRegex(),we=/^(?:\*+(?:((?!\*)punct)|([^\s*]))?)|^_+(?:((?!_)punct)|([^\s_]))?/,ut=c(we,"u").replace(/punct/g,A).getRegex(),pt=c(we,"u").replace(/punct/g,Oe).getRegex(),ct=/^(?:\*+(?:((?!\*)(?!openQuote)punct)|([^\s*]))?)|^_+(?:((?!_)(?!openQuote)punct)|([^\s_]))?/,ht=c(ct,"u").replace(/openQuote/g,it).replace(/punct/g,A).getRegex(),Pe="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)",dt=c(Pe,"gu").replace(/notPunctSpace/g,X).replace(/punctSpace/g,H).replace(/punct/g,A).getRegex(),kt=c(Pe,"gu").replace(/notPunctSpace/g,at).replace(/punctSpace/g,ot).replace(/punct/g,Oe).getRegex(),gt="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)[\\s](\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|(?:(?!\\*)punct|notPunctSpace)(\\*+)(?!\\*)(?=notPunctSpace)",ft=c(gt,"gu").replace(/notPunctSpace/g,X).replace(/punctSpace/g,H).replace(/punct/g,A).getRegex(),mt=c("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)","gu").replace(/notPunctSpace/g,X).replace(/punctSpace/g,H).replace(/punct/g,A).getRegex(),xt="^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)[\\s](_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)|(?:(?!_)punct|notPunctSpace)(_+)(?!_)(?=notPunctSpace)",bt=c(xt,"gu").replace(/notPunctSpace/g,X).replace(/punctSpace/g,H).replace(/punct/g,A).getRegex(),Rt=c(/^~~?(?:((?!~)punct)|[^\s~])/,"u").replace(/punct/g,A).getRegex(),Tt="^[^~]+(?=[^~])|(?!~)punct(~~?)(?=[\\s]|$)|notPunctSpace(~~?)(?!~)(?=punctSpace|$)|(?!~)punctSpace(~~?)(?=notPunctSpace)|[\\s](~~?)(?!~)(?=punct)|(?!~)punct(~~?)(?!~)(?=punct)|notPunctSpace(~~?)(?=notPunctSpace)",Ot=c(Tt,"gu").replace(/notPunctSpace/g,X).replace(/punctSpace/g,H).replace(/punct/g,A).getRegex(),wt=c(/\\(punct)/,"gu").replace(/punct/g,A).getRegex(),Pt=c(/(`+)(?:[^`]|[^`][\s\S]*?[^`])\1(?!`)|`+|\\(punct)/,"gu").replace(/punct/g,A).getRegex(),yt=c(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme",/[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email",/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(),St=c(oe).replace("(?:-->|$)","-->").getRegex(),_t=c("^comment|^</[a-zA-Z][a-zA-Z0-9-]*\\s*>|^<[a-zA-Z][a-zA-Z0-9-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment",St).replace("attribute",/\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(),ye=/\[(?:\\[\s\S]|[^\[\]\\])*\]/,Y=c(/(?:\[(?:brackets|\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+(?!`)[^`]*?`+(?!`)|``+(?=\])|[^\[\]\\`])*?/).replace("brackets",ye).getRegex(),$t=c(/^!?\[(label)\]\([ \t\n]*(href)(?:(?:[ \t]+(?:\n[ \t]*)?|\n[ \t]*)(title))?[ \t\n]*\)/).replace("label",Y).replace("href",/<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]+|(?=\))/).replace("title",/"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(),Lt=c(/^!?\[(label)\]\[(ref)\]/).replace("label",Y).replace("ref",ie).getRegex(),At=c(/^!?\[(ref)\](?:\[\])?/).replace("ref",ie).getRegex(),fe=/(?!\s*\])(?:\\[\s\S]|[^\[\]\\]){1,999}/,zt=c(/(?:[^\[\]\\`]*(?:\[(?:brackets|\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+(?!`)[^`]*?`+(?!`)|``+(?=\]))){0,999}?[^\[\]\\`]*?/).replace("brackets",ye).getRegex(),Mt=c("reflink|nolink(?!\\()","g").replace("reflink",c(/^!?\[(label)\]\[(ref)\]/).replace("label",zt).replace("ref",fe).getRegex()).replace("nolink",c(/^!?\[(ref)\](?:\[\])?/).replace("ref",fe).getRegex()).getRegex(),me=/[hH][tT][tT][pP][sS]?|[fF][tT][pP]/,Ct=/[A-Za-z0-9._+-]+@[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![\w-])/,Et=c(/(?:mailto:email|xmpp:email(?:\/[A-Za-z0-9@.]+)?)/).replace(/email/g,Ct).getRegex(),le={_backpedal:D,anyPunctuation:wt,anyPunctuationOutsideCode:Pt,autolink:yt,blockSkip:lt,br:Te,code:nt,del:D,delLDelim:D,delRDelim:D,emStrongLDelim:ut,emStrongRDelimAst:dt,emStrongRDelimUnd:mt,escape:tt,link:$t,nolink:At,punctuation:st,reflink:Lt,reflinkSearch:Mt,tag:_t,text:rt,url:D},It={...le,emStrongLDelim:ht,emStrongRDelimAst:ft,emStrongRDelimUnd:bt,link:c(/^!?\[(label)\]\((.*?)\)/).replace("label",Y).getRegex(),reflink:c(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label",Y).getRegex()},ne={...le,emStrongRDelimAst:kt,emStrongLDelim:pt,delLDelim:Rt,delRDelim:Ot,url:c(/^emailProtocol|^((?:protocol):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/).replace("emailProtocol",Et).replace("protocol",me).replace("email",/[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![\w-])/).getRegex(),_backpedal:/(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,del:/^(~~?)(?=[^\s~])((?:\\[\s\S]|[^\\])*?(?:\\[\s\S]|[^\s~\\]))\1(?=[^~]|$)/,text:c(/^(?:[^a-zA-Z0-9](?=emailProtocol)|(`+|~+|[^`~])(?:(?=[`~])|(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|protocol:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9](?=emailProtocol)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))))/).replace("protocol",me).replace(/emailProtocol/g,/(?:mailto|xmpp):/).getRegex()},Bt={...ne,br:c(Te).replace("{2,}","*").getRegex(),text:c(ne.text).replace("\\b_","\\b_| {2,}\\n").replace(/\{2,\}/g,"*").getRegex()},V={normal:ae,gfm:Ye,pedantic:et},G={normal:le,gfm:ne,breaks:Bt,pedantic:It};var Dt={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},Se=a=>Dt[a];function y(a,e){if(e){if(T.escapeTest.test(a))return a.replace(T.escapeReplace,Se)}else if(T.escapeTestNoEncode.test(a))return a.replace(T.escapeReplaceNoEncode,Se);return a}function _e(a){return T.numericCharacterReference.test(a)?a.replace(T.numericCharacterReferenceOrAmpersand,(e,t,n)=>{if(t===void 0&&n===void 0)return"&amp;";let s=t===void 0?Number.parseInt(n,16):Number.parseInt(t,10);return s===0||s>1114111||s>=55296&&s<=57343?"\uFFFD":s===38?"&amp;":String.fromCodePoint(s)}):a}function ue(a){try{a=encodeURI(a).replace(T.percentDecode,"%")}catch{return null}return a}function pe(a,e){let t=a.replace(T.findPipe,(r,o,i)=>{let l=!1,u=o;for(;--u>=0&&i[u]==="\\";)l=!l;return l?"|":" |"}),n=t.split(T.splitPipe),s=0;if(n[0].trim()||n.shift(),n.length>0&&!n.at(-1)?.trim()&&n.pop(),e)if(n.length>e)n.splice(e);else for(;n.length<e;)n.push("");for(;s<n.length;s++)n[s]=n[s].trim().replace(T.slashPipe,"|");return n}function M(a,e,t){let n=a.length;if(n===0)return"";let s=0;for(;s<n;){let r=a.charAt(n-s-1);if(r===e&&!t)s++;else if(r!==e&&t)s++;else break}return a.slice(0,n-s)}function ce(a){let e=a.split(`
+`),t=e.length-1;for(;t>=0&&T.blankLine.test(e[t]);)t--;return e.length-t<=2?a:e.slice(0,t+1).join(`
+`)}function N(a){return a.trim().toLowerCase().toUpperCase().toLowerCase()}function he(a,e){if(a.indexOf(e[0])===-1&&a.indexOf(e[1])===-1)return-1;let t=0;for(let n=0;n<a.length;n++)if(a[n]==="\\")n++;else if(a[n]===e[0])t++;else if(a[n]===e[1]&&(t--,t<0))return n;return t>0?-2:-1}function J(a,e=0){let t=e,n="";for(let s of a)if(s==="	"){let r=4-t%4;n+=" ".repeat(r),t+=r}else n+=s,t++;return n}function $e(a,e,t,n,s){let r=e.href,o=e.title||null,i=a[1].replace(s.other.outputLinkReplace,"$1"),l=a[0].charAt(0)==="!",u=n.state.inLink,h=n.state.linkEmitted,p=n.state.inRawBlock;n.state.inLink=!0,n.state.linkEmitted=!1;let d=n.inlineTokens(i),g=n.state.linkEmitted;if(n.state.linkEmitted=h,n.state.inLink=u,!l){if(g){n.state.inRawBlock=p;return}n.state.linkEmitted=!0}return{type:l?"image":"link",raw:t,href:r,title:o,text:i,tokens:d}}function qt(a,e,t){let n=a.match(t.other.indentCodeCompensation);if(n===null)return e;let s=n[1];return e.split(`
+`).map(r=>{let o=r.match(t.other.beginningSpace);if(o===null)return r;let[i]=o;return r.slice(Math.min(i.length,s.length))}).join(`
+`)}function Le(a,e,t,n){if(!e.includes("<"))return!1;for(let s=0;s<e.length;s++){if(e[s]==="\\"){s++;continue}if(e[s]==="`"){let i=n.inline.code.exec(e.slice(s));if(i){s+=i[0].length-1;continue}}if(e[s]!=="<")continue;let r=a.slice(t+s),o=n.inline.tag.exec(r)||n.inline.autolink.exec(r);if(o){if(o[0].length>e.length-s)return!0;s+=o[0].length-1}}return!1}var _=class{options;rules;lexer;constructor(e){this.options=e||P}space(e){let t=this.rules.block.newline.exec(e);if(t&&t[0].length>0)return{type:"space",raw:t[0]}}code(e){let t=this.rules.block.code.exec(e);if(t){let n=this.options.pedantic?t[0]:ce(t[0]),s=n.replace(this.rules.other.codeRemoveIndent,"");return{type:"code",raw:n,codeBlockStyle:"indented",text:s}}}fences(e){let t=this.rules.block.fences.exec(e);if(t){let n=t[0],s=qt(n,t[3]||"",this.rules);return{type:"code",raw:n,lang:t[2]?t[2].trim().replace(this.rules.inline.anyPunctuation,"$1"):t[2],text:s}}}heading(e){let t=this.rules.block.heading.exec(e);if(t){let n=t[2].trim();if(this.rules.other.endingHash.test(n)){let s=M(n,"#");(this.options.pedantic||!s||this.rules.other.endingSpaceTabChar.test(s))&&(n=s.trim())}return{type:"heading",raw:M(t[0],`
+`),depth:t[1].length,text:n,tokens:this.lexer.inline(n)}}}hr(e){let t=this.rules.block.hr.exec(e);if(t)return{type:"hr",raw:M(t[0],`
+`)}}blockquote(e){let t=this.rules.block.blockquote.exec(e);if(t){let n=M(t[0],`
+`).split(`
+`),s="",r="",o=[];for(;n.length>0;){let i=!1,l=[],u;for(u=0;u<n.length;u++)if(this.rules.other.blockquoteStart.test(n[u]))l.push(n[u]),i=!0;else if(!i)l.push(n[u]);else break;n=n.slice(u);let h=l.join(`
+`),p=h.replace(this.rules.other.blockquoteMarkerWhitespace,(k,b,x)=>b+J(x,b.length)).replace(this.rules.other.blockquoteSetextReplace,`
+    $1`).replace(this.rules.other.blockquoteSetextReplace2,"");s=s?`${s}
+${h}`:h,r=r?`${r}
+${p}`:p;let d=this.lexer.state.top;if(this.lexer.state.top=!0,this.lexer.blockTokens(p,o,!0),this.lexer.state.top=d,n.length===0)break;let g=o.at(-1);if(g?.type==="code"||g?.type==="heading"||g?.type==="hr"||g?.type==="html")break;if(g?.type==="blockquote"){let k=g,b=n.join(`
+`),x=k.raw+`
+`+b.replace(this.rules.other.blockquoteSetextReplace2,""),f=this.blockquote(x);o[o.length-1]=f;let S=x.substring(f.raw.length).replace(/^\n/,""),R=S?S.split(`
+`).length:0,C=R?n.slice(0,-R):n;C.length>0&&(s=`${s}
+${C.join(`
+`)}`),r=r.substring(0,r.length-k.text.length)+f.text;break}else if(g?.type==="list"){let k=g,b=k.raw+`
+`+n.join(`
+`),x=this.list(b);o[o.length-1]=x;let f=x.raw.length>k.raw.length?b.slice(k.raw.length+1,x.raw.length).split(`
+`).length:0;if(f>0){let S=n.slice(0,f).join(`
+`);s=`${s}
+${S}`,r=`${r}
+${S}`}n=n.slice(f);continue}}return{type:"blockquote",raw:s,tokens:o,text:r}}}list(e){let t=this.rules.block.list.exec(e);if(t){let n=e,s=()=>n.length-e.length,r=t[1].trim(),o=r.length>1,i={type:"list",raw:"",ordered:o,start:o?+r.slice(0,-1):"",loose:!1,items:[]};r=o?`\\d{1,9}\\${r.slice(-1)}`:`\\${r}`,this.options.pedantic&&(r=o?r:"[*+-]");let l=this.rules.other.listItemRegex(r),u=!1;for(;e;){let p=!1,d="";if(!(t=l.exec(e))||this.rules.block.hr.test(e))break;let g=s();e=e.substring(t[0].length);let k=t[2].split(`
+`,1)[0],b=t[1].length,x=this.options.pedantic?J(k,b):k.replace(this.rules.other.leadingSpaceTab,j=>J(j,b)),f=e.split(`
+`,1)[0],S=!x.trim(),R=0;if(this.options.pedantic?(R=2,d=x.trimStart()):S?R=b+1:(R=x.search(this.rules.other.nonSpaceChar),R=R>4?1:R,d=x.slice(R),R+=b),S&&this.rules.other.blankLine.test(f)&&(e=e.substring(f.length+1),p=!0),!p){let j=this.rules.other.nextBulletRegex(R),E=this.rules.other.hrRegex(R),F=this.rules.other.fencesBeginRegex(R),U=this.options.pedantic?this.rules.other.pedanticHeadingBeginRegex(R):this.rules.other.headingBeginRegex(R),ze=this.rules.other.htmlBeginRegex(R),Me=this.rules.other.blockquoteBeginRegex(R);for(;e;){let de=e.split(`
+`,1)[0],v;if(f=de,this.options.pedantic?(f=f.replace(this.rules.other.listReplaceNesting,"  "),v=f):v=f.replace(this.rules.other.leadingSpaceTab,ke=>J(ke)),F.test(f)||U.test(f)||ze.test(f)||Me.test(f)||j.test(f)||E.test(f))break;if(v.search(this.rules.other.nonSpaceChar)>=R||!f.trim())d+=`
+`+v.slice(R);else{if(S||x.replace(this.rules.other.tabCharGlobal,"    ").search(this.rules.other.nonSpaceChar)>=4||F.test(x)||U.test(x)||E.test(x))break;let Ce=!this.options.pedantic&&/^ {0,3}(?:=+|-+) *$/.test(f)&&this.rules.block.lheading.test(`${x}
+${f}`)?`    ${v.replace(/^ {0,3}/,"")}`:f;d+=`
+`+Ce}S=!f.trim(),e=e.substring(de.length+1),x=v.slice(R)}}let C=n.slice(g,s());i.loose||(u?i.loose=!0:this.rules.other.doubleBlankLine.test(C)&&(u=!0)),i.items.push({type:"list_item",raw:C,task:!!this.options.gfm&&this.rules.other.listIsTask.test(d),loose:!1,text:d,tokens:[]})}let h=i.items.at(-1);if(h)h.raw=h.raw.trimEnd(),h.text=h.text.trimEnd();else return;i.raw=n.slice(0,s()).trimEnd();for(let p of i.items)if(this.lexer.state.top=!1,p.tokens=this.lexer.blockTokens(p.text,[]),!i.loose){let d=p.tokens.filter(k=>k.type==="space"),g=d.length>0&&d.some(k=>this.rules.other.anyLine.test(k.raw));i.loose=g}for(let p of i.items){let d=p.tokens[0];if(p.task&&(d?.type==="text"||d?.type==="paragraph")){p.text=p.text.replace(this.rules.other.listReplaceTask,""),d.raw=d.raw.replace(this.rules.other.listReplaceTask,""),d.text=d.text.replace(this.rules.other.listReplaceTask,"");for(let k=this.lexer.inlineQueue.length-1;k>=0;k--)if(this.rules.other.listIsTask.test(this.lexer.inlineQueue[k].src)){this.lexer.inlineQueue[k].src=this.lexer.inlineQueue[k].src.replace(this.rules.other.listReplaceTask,"");break}let g=this.rules.other.listTaskCheckbox.exec(p.raw);if(g){let k={type:"checkbox",raw:g[0]+" ",checked:g[0]!=="[ ]"};p.checked=k.checked,i.loose?p.tokens[0]&&["paragraph","text"].includes(p.tokens[0].type)&&"tokens"in p.tokens[0]&&p.tokens[0].tokens?(p.tokens[0].raw=k.raw+p.tokens[0].raw,p.tokens[0].text=k.raw+p.tokens[0].text,p.tokens[0].tokens.unshift(k)):p.tokens.unshift({type:"paragraph",raw:k.raw,text:k.raw,tokens:[k]}):p.tokens.unshift(k)}}else p.task&&(p.task=!1)}if(i.loose)for(let p of i.items){p.loose=!0;for(let d of p.tokens)d.type==="text"&&(d.type="paragraph")}return i}}html(e){let t=this.rules.block.html.exec(e);if(t){let n=ce(t[0]);return{type:"html",block:!0,raw:n,pre:t[1]==="pre"||t[1]==="script"||t[1]==="style",text:n}}}def(e){let t=this.rules.block.def.exec(e);if(t){if(!this.rules.other.startAngleBracket.test(t[2])&&he(t[2],"()")!==-1)return;let n=N(t[1]).replace(this.rules.other.multipleSpaceGlobal," "),s=t[2]?t[2].replace(this.rules.other.hrefBrackets,"$1").replace(this.rules.inline.anyPunctuation,"$1"):"",r=t[3]?t[3].substring(1,t[3].length-1).replace(this.rules.inline.anyPunctuation,"$1"):t[3];return{type:"def",tag:n,raw:M(t[0],`
+`),href:s,title:r}}}table(e){let t=this.rules.block.table.exec(e);if(!t||!this.rules.other.tableDelimiter.test(t[2]))return;let n=pe(t[1]),s=t[2].replace(this.rules.other.tableAlignChars,"").split("|"),r=t[3]?.trim()?t[3].replace(this.rules.other.tableRowBlankLine,"").split(`
+`):[],o={type:"table",raw:M(t[0],`
+`),header:[],align:[],rows:[]};if(n.length===s.length){for(let i of s)this.rules.other.tableAlignRight.test(i)?o.align.push("right"):this.rules.other.tableAlignCenter.test(i)?o.align.push("center"):this.rules.other.tableAlignLeft.test(i)?o.align.push("left"):o.align.push(null);for(let i=0;i<n.length;i++)o.header.push({text:n[i],tokens:this.lexer.inline(n[i]),header:!0,align:o.align[i]});for(let i of r)o.rows.push(pe(i,o.header.length).map((l,u)=>({text:l,tokens:this.lexer.inline(l),header:!1,align:o.align[u]})));return o}}lheading(e){let t=this.rules.block.lheading.exec(e);if(t){let n=t[1].trim();return{type:"heading",raw:M(t[0],`
+`),depth:t[2].charAt(0)==="="?1:2,text:n,tokens:this.lexer.inline(n)}}}paragraph(e){let t=this.rules.block.paragraph.exec(e);if(t){let n=t[1].charAt(t[1].length-1)===`
+`?t[1].slice(0,-1):t[1];return{type:"paragraph",raw:t[0],text:n,tokens:this.lexer.inline(n)}}}text(e){let t=this.rules.block.text.exec(e);if(t)return{type:"text",raw:t[0],text:t[0],tokens:this.lexer.inline(t[0])}}escape(e){let t=this.rules.inline.escape.exec(e);if(t)return{type:"escape",raw:t[0],text:t[1]}}tag(e){let t=this.rules.inline.tag.exec(e);if(t)return!this.lexer.state.inLink&&this.rules.other.startATag.test(t[0])?this.lexer.state.inLink=!0:this.lexer.state.inLink&&this.rules.other.endATag.test(t[0])&&(this.lexer.state.inLink=!1),!this.lexer.state.inRawBlock&&this.rules.other.startPreScriptTag.test(t[0])?this.lexer.state.inRawBlock=!0:this.lexer.state.inRawBlock&&this.rules.other.endPreScriptTag.test(t[0])&&(this.lexer.state.inRawBlock=!1),{type:"html",raw:t[0],inLink:this.lexer.state.inLink,inRawBlock:this.lexer.state.inRawBlock,block:!1,text:t[0]}}link(e){if(this.lexer.state.linkParenPossible===!1)return;let t=this.rules.inline.link.exec(e);if(t){let n=t[0].charAt(0)==="!"?2:1;if(!this.options.pedantic&&Le(e,t[1],n,this.rules))return;let s=t[2].trim();if(!this.options.pedantic&&this.rules.other.startAngleBracket.test(s)){if(!this.rules.other.endAngleBracket.test(s))return;let i=M(s.slice(0,-1),"\\");if((s.length-i.length)%2===0)return}else{let i=he(t[2],"()");if(i===-2)return;if(i>-1){let u=(t[0].indexOf("!")===0?5:4)+t[1].length+i;t[2]=t[2].substring(0,i),t[0]=t[0].substring(0,u).trim(),t[3]=""}}let r=t[2],o="";if(this.options.pedantic){let i=this.rules.other.pedanticHrefTitle.exec(r);i&&(r=i[1],o=i[3])}else o=t[3]?t[3].slice(1,-1):"";return r=r.trim(),this.rules.other.startAngleBracket.test(r)&&(this.options.pedantic&&!this.rules.other.endAngleBracket.test(s)?r=r.slice(1):r=r.slice(1,-1)),$e(t,{href:r&&r.replace(this.rules.inline.anyPunctuation,"$1"),title:o&&o.replace(this.rules.inline.anyPunctuation,"$1")},t[0],this.lexer,this.rules)}}reflink(e,t){let n;if((n=this.rules.inline.reflink.exec(e))||(n=this.rules.inline.nolink.exec(e))){let s=n[0].charAt(0)==="!"?2:1;if(!this.options.pedantic&&Le(e,n[1],s,this.rules))return;let r=(n[2]||n[1]).replace(this.rules.other.multipleSpaceGlobal," "),o=t[N(r)];if(!o){let i=n[0].charAt(0);return{type:"text",raw:i,text:i}}return $e(n,o,n[0],this.lexer,this.rules)}}emStrong(e,t,n=""){let s=this.rules.inline.emStrongLDelim.exec(e);if(!s||!s[1]&&!s[2]&&!s[3]&&!s[4])return;let r=s[0][0],o=n===r,i=t.length-e.length,l=i;for(;!this.options.pedantic&&l>0&&t[l-1]===r;)l--;let u=[...t.slice(Math.max(0,l-2),l)].at(-1)??"",h=u==="*"||u==="_"||!!this.rules.inline.punctuation.exec(u);l<i&&(n=u);let p=l<i?h:!!this.rules.inline.punctuation.exec(n);if(s[4]&&n.match(this.rules.other.unicodeAlphaNumeric))return;let d=s[1]||s[3]||"";if(!d||!n||p){let g=[...s[0]].length-1,k,b,x=g,f=0,S=i-l+g,R=!this.options.pedantic&&!!u.trim()&&(!!d||r==="*"&&!h),C=r==="*"?this.rules.inline.emStrongRDelimAst:this.rules.inline.emStrongRDelimUnd;for(C.lastIndex=0,t=t.slice(-1*e.length+g);(s=C.exec(t))!==null;){if(k=s[1]||s[2]||s[3]||s[4]||s[5]||s[6],!k)continue;if(b=[...k].length,s[3]||s[4]){x+=b;continue}else if(s[5]||s[6]||R){if(o&&(s[5]||s[6]))break;if(S%3&&!((S+b)%3)){f+=b;continue}}if(x-=b,x>0)continue;b=Math.min(b,b+x+f);let j=[...s[0]][0].length,E=e.slice(0,g+s.index+j+b);if(Math.min(g,b)%2){let U=E.slice(1,-1);return{type:"em",raw:E,text:U,tokens:this.lexer.inlineTokens(U)}}let F=E.slice(2,-2);return{type:"strong",raw:E,text:F,tokens:this.lexer.inlineTokens(F)}}}}codespan(e){let t=this.rules.inline.code.exec(e);if(t){let n=t[2].replace(this.rules.other.newLineCharGlobal," "),s=this.rules.other.nonSpaceChar.test(n),r=this.rules.other.startingSpaceChar.test(n)&&this.rules.other.endingSpaceChar.test(n);return s&&r&&(n=n.substring(1,n.length-1)),{type:"codespan",raw:t[0],text:n}}}br(e){let t=this.rules.inline.br.exec(e);if(t)return{type:"br",raw:t[0]}}del(e,t,n=""){let s=this.rules.inline.delLDelim.exec(e);if(!s)return;if(!(s[1]||"")||!n||this.rules.inline.punctuation.exec(n)){let o=[...s[0]].length-1,i,l,u=o,h=this.rules.inline.delRDelim;for(h.lastIndex=0,t=t.slice(-1*e.length+o);(s=h.exec(t))!==null;){if(i=s[1]||s[2]||s[3]||s[4]||s[5]||s[6],!i||(l=[...i].length,l!==o))continue;if(s[3]||s[4]){u+=l;continue}if(u-=l,u>0)continue;l=Math.min(l,l+u);let p=[...s[0]][0].length,d=e.slice(0,o+s.index+p+l),g=d.slice(o,-o);return{type:"del",raw:d,text:g,tokens:this.lexer.inlineTokens(g)}}}}autolink(e){let t=this.rules.inline.autolink.exec(e);if(t){let n,s;return t[2]==="@"?(n=t[1],s="mailto:"+n):(n=t[1],s=n),{type:"link",raw:t[0],text:n,href:s,autolink:!0,tokens:[{type:"text",raw:n,text:n}]}}}url(e){let t;if(t=this.rules.inline.url.exec(e)){let n,s;if(t[2]==="@")n=t[0],s="mailto:"+n;else{let r;do r=t[0],t[0]=this.rules.inline._backpedal.exec(t[0])?.[0]??"";while(r!==t[0]);n=t[0],t[1]==="www."?s="http://"+t[0]:s=t[0]}return{type:"link",raw:t[0],text:n,href:s,autolink:!0,tokens:[{type:"text",raw:n,text:n}]}}}inlineText(e){let t=this.rules.inline.text.exec(e);if(t){let n=this.lexer.state.inRawBlock;return{type:"text",raw:t[0],text:n?t[0]:_e(t[0]),escaped:n}}}};var O=class a{tokens;options;state;inlineQueue;tokenizer;constructor(e){this.tokens=[],this.tokens.links=Object.create(null),this.options=e||P,this.options.tokenizer=this.options.tokenizer||new _,this.tokenizer=this.options.tokenizer,this.tokenizer.options=this.options,this.tokenizer.lexer=this,this.inlineQueue=[],this.state={inLink:!1,inRawBlock:!1,linkEmitted:!1,linkParenPossible:!0,top:!0};let t={other:T,block:V.normal,inline:G.normal};this.options.pedantic?(t.block=V.pedantic,t.inline=G.pedantic):this.options.gfm&&(t.block=V.gfm,this.options.breaks?t.inline=G.breaks:t.inline=G.gfm),this.tokenizer.rules=t}static get rules(){return{block:V,inline:G}}static lex(e,t){return new a(t).lex(e)}static lexInline(e,t){return new a(t).inlineTokens(e)}lex(e){e=e.replace(T.carriageReturn,`
+`),this.blockTokens(e,this.tokens);for(let t=0;t<this.inlineQueue.length;t++){let n=this.inlineQueue[t];this.state.inRawBlock=!1,this.inlineTokens(n.src,n.tokens)}return this.inlineQueue=[],this.tokens}blockTokens(e,t=[],n=!1){this.tokenizer.lexer=this,this.options.pedantic&&(e=e.replace(T.tabCharGlobal,"    ").replace(T.spaceLine,""));let s=1/0;for(;e;){if(e.length<s)s=e.length;else{this.infiniteLoopError(e.charCodeAt(0));break}let r;if(this.options.extensions?.block?.some(i=>(r=i.call({lexer:this},e,t))?(e=e.substring(r.raw.length),t.push(r),!0):!1))continue;if(r=this.tokenizer.space(e)){e=e.substring(r.raw.length);let i=t.at(-1);r.raw.length===1&&i!==void 0?i.raw+=`
+`:t.push(r);continue}if(r=this.tokenizer.code(e)){e=e.substring(r.raw.length);let i=t.at(-1);i?.type==="paragraph"||i?.type==="text"?(i.raw+=(i.raw.endsWith(`
+`)?"":`
+`)+r.raw,i.text+=`
+`+r.text,this.inlineQueue.at(-1).src=i.text):t.push(r);continue}if(r=this.tokenizer.fences(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.heading(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.hr(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.blockquote(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.list(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.html(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.def(e)){e=e.substring(r.raw.length);let i=t.at(-1);i?.type==="paragraph"||i?.type==="text"?(i.raw+=(i.raw.endsWith(`
+`)?"":`
+`)+r.raw,i.text+=`
+`+r.raw,this.inlineQueue.at(-1).src=i.text):(this.tokens.links[r.tag]||(this.tokens.links[r.tag]={href:r.href,title:r.title}),t.push(r));continue}if(r=this.tokenizer.table(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.lheading(e)){e=e.substring(r.raw.length),t.push(r);continue}let o=e;if(this.options.extensions?.startBlock){let i=1/0,l=e.slice(1),u;this.options.extensions.startBlock.forEach(h=>{u=h.call({lexer:this},l),typeof u=="number"&&u>=0&&(i=Math.min(i,u))}),i<1/0&&i>=0&&(o=e.substring(0,i+1))}if(this.state.top&&(r=this.tokenizer.paragraph(o))){let i=t.at(-1);n&&i?.type==="paragraph"?(i.raw+=(i.raw.endsWith(`
+`)?"":`
+`)+r.raw,i.text+=`
+`+r.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=i.text):t.push(r),n=o.length!==e.length,e=e.substring(r.raw.length);continue}if(r=this.tokenizer.text(e)){e=e.substring(r.raw.length);let i=t.at(-1);i?.type==="text"?(i.raw+=(i.raw.endsWith(`
+`)?"":`
+`)+r.raw,i.text+=`
+`+r.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=i.text):t.push(r);continue}if(e){this.infiniteLoopError(e.charCodeAt(0));break}}return this.state.top=!0,t}inline(e,t=[]){return this.inlineQueue.push({src:e,tokens:t}),t}linkInText(e){if(!e.includes("["))return!1;let t=this.tokenizer.rules.inline.link;for(let n of e.matchAll(this.tokenizer.rules.inline.blockSkip))if(t.test(n[0])&&e.charAt(n.index-1)!=="!")return!0;for(let n of e.matchAll(this.tokenizer.rules.inline.reflinkSearch)){let s=n[0],r=s.lastIndexOf("[");if(!(s.charAt(0)==="!"||!Object.hasOwn(this.tokens.links,N(s.slice(r+1,-1))))&&!(r>1&&this.linkInText(s.slice(1,r-1))))return!0}return!1}inlineTokens(e,t=[]){this.tokenizer.lexer=this;let n=this.state.linkParenPossible;this.state.linkParenPossible=n&&e.includes(")");try{return this.#e(e,t)}finally{this.state.linkParenPossible=n}}#e(e,t){let n=e.includes("*")||e.includes("_")||e.includes("~")||this.options.hooks?.emStrongMask||this.tokenizer.emStrong!==_.prototype.emStrong||this.tokenizer.del!==_.prototype.del?this.#t(e):e,s=!1,r="",o=1/0;for(;e;){if(e.length<o)o=e.length;else{this.infiniteLoopError(e.charCodeAt(0));break}s||(r=""),s=!1;let i;if(this.options.extensions?.inline?.some(u=>(i=u.call({lexer:this},e,t))?(e=e.substring(i.raw.length),t.push(i),!0):!1))continue;if(i=this.tokenizer.escape(e)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.tag(e)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.link(e)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.reflink(e,this.tokens.links)){e=e.substring(i.raw.length);let u=t.at(-1);i.type==="text"&&u?.type==="text"?(u.raw+=i.raw,u.text+=i.text):t.push(i);continue}if(i=this.tokenizer.emStrong(e,n,r)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.codespan(e)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.br(e)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.del(e,n,r)){e=e.substring(i.raw.length),t.push(i);continue}if(i=this.tokenizer.autolink(e)){e=e.substring(i.raw.length),t.push(i);continue}if(!this.state.inLink&&(i=this.tokenizer.url(e))){e=e.substring(i.raw.length),t.push(i);continue}let l=e;if(this.options.extensions?.startInline){let u=1/0,h=e.slice(1),p;this.options.extensions.startInline.forEach(d=>{p=d.call({lexer:this},h),typeof p=="number"&&p>=0&&(u=Math.min(u,p))}),u<1/0&&u>=0&&(l=e.substring(0,u+1))}if(i=this.tokenizer.inlineText(l)){e=e.substring(i.raw.length),i.raw.slice(-1)!=="_"&&(r=i.raw.slice(-1)),s=!0;let u=t.at(-1);u?.type==="text"?(u.raw+=i.raw,u.text+=i.text):t.push(i);continue}if(e){this.infiniteLoopError(e.charCodeAt(0));break}}return t}#t(e){let t=e;if(this.tokens.links&&e.includes("[")){let n=this.tokenizer.rules.inline.reflinkSearch,s=r=>{let o=r.lastIndexOf("[");if(!Object.hasOwn(this.tokens.links,N(r.slice(o+1,-1))))return r;if(o>1&&r.charAt(0)!=="!"){let i=r.slice(1,o-1);if(this.linkInText(i))return"["+i.replace(n,s)+"]["+"a".repeat(r.length-o-2)+"]"}return"["+"a".repeat(r.length-2)+"]"};t=t.replace(n,s)}return t=t.replace(this.tokenizer.rules.inline.anyPunctuationOutsideCode,(n,s,r)=>r?"+".repeat(n.length):s?s+n.slice(s.length,-s.length).replace(/`/g,"+")+s:n),t=t.replace(this.tokenizer.rules.inline.blockSkip,(n,s,r)=>{let o=r?r.length:0;return n.slice(0,o)+"["+"a".repeat(n.length-o-2)+"]"}),t=this.options.hooks?.emStrongMask?.call({lexer:this},t)??t,t}infiniteLoopError(e){let t="Infinite loop on byte: "+e;if(this.options.silent)console.error(t);else throw new Error(t)}};var $=class{options;parser;constructor(e){this.options=e||P}space(e){return""}code({text:e,lang:t,escaped:n}){let s=(t||"").match(T.notSpaceStart)?.[0],r=e?e.replace(T.endingNewline,"")+`
+`:"";return s?'<pre><code class="language-'+y(s)+'">'+(n?r:y(r,!0))+`</code></pre>
+`:"<pre><code>"+(n?r:y(r,!0))+`</code></pre>
+`}blockquote({tokens:e}){return`<blockquote>
+${this.parser.parse(e)}</blockquote>
+`}html({text:e}){return e}def(e){return""}heading({tokens:e,depth:t}){return`<h${t}>${this.parser.parseInline(e)}</h${t}>
+`}hr(e){return`<hr>
+`}list(e){let t=e.ordered,n=e.start,s="";for(let i=0;i<e.items.length;i++){let l=e.items[i];s+=this.listitem(l)}let r=t?"ol":"ul",o=t&&n!==1?' start="'+n+'"':"";return"<"+r+o+`>
+`+s+"</"+r+`>
+`}listitem(e){return`<li>${this.parser.parse(e.tokens)}</li>
+`}checkbox({checked:e}){return"<input "+(e?'checked="" ':"")+'disabled="" type="checkbox"> '}paragraph({tokens:e}){return`<p>${this.parser.parseInline(e)}</p>
+`}table(e){let t="",n="";for(let r=0;r<e.header.length;r++)n+=this.tablecell(e.header[r]);t+=this.tablerow({text:n});let s="";for(let r=0;r<e.rows.length;r++){let o=e.rows[r];n="";for(let i=0;i<o.length;i++)n+=this.tablecell(o[i]);s+=this.tablerow({text:n})}return s&&(s=`<tbody>${s}</tbody>`),`<table>
+<thead>
+`+t+`</thead>
+`+s+`</table>
+`}tablerow({text:e}){return`<tr>
+${e}</tr>
+`}tablecell(e){let t=this.parser.parseInline(e.tokens),n=e.header?"th":"td";return(e.align?`<${n} align="${e.align}">`:`<${n}>`)+t+`</${n}>
+`}strong({tokens:e}){return`<strong>${this.parser.parseInline(e)}</strong>`}em({tokens:e}){return`<em>${this.parser.parseInline(e)}</em>`}codespan({text:e}){return`<code>${y(e,!0)}</code>`}br(e){return"<br>"}del({tokens:e}){return`<del>${this.parser.parseInline(e)}</del>`}link({href:e,title:t,text:n,tokens:s,autolink:r}){let o=r?y(n,!0):this.parser.parseInline(s),i=ue(e);if(i===null)return o;e=y(i,r);let l='<a href="'+e+'"';return t&&(l+=' title="'+y(t)+'"'),l+=">"+o+"</a>",l}image({href:e,title:t,text:n,tokens:s}){s&&(n=this.parser.parseInline(s,this.parser.textRenderer));let r=ue(e);if(r===null)return y(n);e=r;let o=`<img src="${y(e)}" alt="${y(n)}"`;return t&&(o+=` title="${y(t)}"`),o+=">",o}text(e){return"tokens"in e&&e.tokens?this.parser.parseInline(e.tokens):"escaped"in e&&e.escaped?e.text:y(e.text)}};var z=class{parser;strong({text:e,tokens:t}){return t?this.parser.parseInline(t,this):e}em({text:e,tokens:t}){return t?this.parser.parseInline(t,this):e}codespan({text:e}){return e}del({text:e,tokens:t}){return t?this.parser.parseInline(t,this):e}html({text:e}){return e}text({text:e}){return e}link({text:e,tokens:t}){return t?this.parser.parseInline(t,this):e}image({text:e,tokens:t}){return t?this.parser.parseInline(t,this):e}br(){return""}checkbox({raw:e}){return e}};var w=class a{options;renderer;textRenderer;constructor(e){this.options=e||P,this.options.renderer=this.options.renderer||new $,this.renderer=this.options.renderer,this.renderer.options=this.options,this.renderer.parser=this,this.textRenderer=new z,this.textRenderer.parser=this}static parse(e,t){return new a(t).parse(e)}static parseInline(e,t){return new a(t).parseInline(e)}parse(e){this.renderer.parser=this;let t="";for(let n=0;n<e.length;n++){let s=e[n];if(this.options.extensions?.renderers?.[s.type]){let o=s,i=this.options.extensions.renderers[o.type].call({parser:this},o);if(i!==!1||!["space","hr","heading","code","table","blockquote","list","checkbox","html","def","paragraph","text"].includes(o.type)){t+=i||"";continue}}let r=s;switch(r.type){case"space":{t+=this.renderer.space(r);break}case"hr":{t+=this.renderer.hr(r);break}case"heading":{t+=this.renderer.heading(r);break}case"code":{t+=this.renderer.code(r);break}case"table":{t+=this.renderer.table(r);break}case"blockquote":{t+=this.renderer.blockquote(r);break}case"list":{t+=this.renderer.list(r);break}case"checkbox":{t+=this.renderer.checkbox(r);break}case"html":{t+=this.renderer.html(r);break}case"def":{t+=this.renderer.def(r);break}case"paragraph":{t+=this.renderer.paragraph(r);break}case"text":{t+=this.renderer.text(r);break}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return t}parseInline(e,t=this.renderer){this.renderer.parser=this;let n="";for(let s=0;s<e.length;s++){let r=e[s];if(this.options.extensions?.renderers?.[r.type]){let i=this.options.extensions.renderers[r.type].call({parser:this},r);if(i!==!1||!["escape","html","link","image","checkbox","strong","em","codespan","br","del","text"].includes(r.type)){n+=i||"";continue}}let o=r;switch(o.type){case"escape":{n+=t.text(o);break}case"html":{n+=t.html(o);break}case"link":{n+=t.link(o);break}case"image":{n+=t.image(o);break}case"checkbox":{n+=t.checkbox(o);break}case"strong":{n+=t.strong(o);break}case"em":{n+=t.em(o);break}case"codespan":{n+=t.codespan(o);break}case"br":{n+=t.br(o);break}case"del":{n+=t.del(o);break}case"text":{n+=t.text(o);break}default:{let i='Token with "'+o.type+'" type was not found.';if(this.options.silent)return console.error(i),"";throw new Error(i)}}}return n}};var L=class{options;block;constructor(e){this.options=e||P}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens","emStrongMask"]);static passThroughHooksRespectAsync=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}emStrongMask(e){return e}provideLexer(e=this.block){return e?O.lex:O.lexInline}provideParser(e=this.block){return e?w.parse:w.parseInline}};function q(a,e){if(Array.isArray(e))for(let t=0;t<e.length;t++)a.push(e[t]);else a.push(e)}var Q=class{defaults=I();options=this.setOptions;parse=this.parseMarkdown(!0);parseInline=this.parseMarkdown(!1);Parser=w;Renderer=$;TextRenderer=z;Lexer=O;Tokenizer=_;Hooks=L;constructor(...e){this.use(...e)}walkTokens(e,t){let n=[];for(let s of e)switch(q(n,t.call(this,s)),s.type){case"table":{let r=s;for(let o of r.header)q(n,this.walkTokens(o.tokens,t));for(let o of r.rows)for(let i of o)q(n,this.walkTokens(i.tokens,t));break}case"list":{let r=s;q(n,this.walkTokens(r.items,t));break}default:{let r=s;this.defaults.extensions?.childTokens?.[r.type]?this.defaults.extensions.childTokens[r.type].forEach(o=>{let i=r[o].flat(1/0);q(n,this.walkTokens(i,t))}):r.tokens&&q(n,this.walkTokens(r.tokens,t))}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let s={...n};if(s.async=this.defaults.async||s.async||!1,n.extensions&&(n.extensions.forEach(r=>{if(!r.name)throw new Error("extension name required");if("renderer"in r){let o=t.renderers[r.name];o?t.renderers[r.name]=function(...i){let l=r.renderer.apply(this,i);return l===!1&&(l=o.apply(this,i)),l}:t.renderers[r.name]=r.renderer}if("tokenizer"in r){if(!r.level||r.level!=="block"&&r.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let o=t[r.level];o?o.unshift(r.tokenizer):t[r.level]=[r.tokenizer],r.start&&(r.level==="block"?t.startBlock?t.startBlock.push(r.start):t.startBlock=[r.start]:r.level==="inline"&&(t.startInline?t.startInline.push(r.start):t.startInline=[r.start]))}"childTokens"in r&&r.childTokens&&(t.childTokens[r.name]=r.childTokens)}),s.extensions=t),n.renderer){let r=this.defaults.renderer||new $(this.defaults);for(let o in n.renderer){if(!(o in r))throw new Error(`renderer '${o}' does not exist`);if(["options","parser"].includes(o))continue;let i=o,l=n.renderer[i],u=r[i];r[i]=(...h)=>{let p=l.apply(r,h);return p===!1&&(p=u.apply(r,h)),p||""}}s.renderer=r}if(n.tokenizer){let r=this.defaults.tokenizer||new _(this.defaults);for(let o in n.tokenizer){if(!(o in r))throw new Error(`tokenizer '${o}' does not exist`);if(["options","rules","lexer"].includes(o))continue;let i=o,l=n.tokenizer[i],u=r[i];r[i]=(...h)=>{let p=l.apply(r,h);return p===!1&&(p=u.apply(r,h)),p}}s.tokenizer=r}if(n.hooks){let r=this.defaults.hooks||new L;for(let o in n.hooks){if(!(o in r))throw new Error(`hook '${o}' does not exist`);if(["options","block"].includes(o))continue;let i=o,l=n.hooks[i],u=r[i];L.passThroughHooks.has(o)?r[i]=h=>{if(r.options.async&&L.passThroughHooksRespectAsync.has(o))return(async()=>{let d=await l.call(r,h);return u.call(r,d)})();let p=l.call(r,h);return u.call(r,p)}:r[i]=(...h)=>{if(r.options.async)return(async()=>{let d=await l.apply(r,h);return d===!1&&(d=await u.apply(r,h)),d})();let p=l.apply(r,h);return p===!1&&(p=u.apply(r,h)),p}}s.hooks=r}if(n.walkTokens){let r=this.defaults.walkTokens,o=n.walkTokens;s.walkTokens=function(i){let l=[];return l.push(o.call(this,i)),r&&q(l,r.call(this,i)),l}}this.defaults={...this.defaults,...s}}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return O.lex(e,t??this.defaults)}parser(e,t){return w.parse(e,t??this.defaults)}parseMarkdown(e){return(n,s)=>{let r={...s},o={...this.defaults,...r},i=this.onError(!!o.silent,!!o.async);if(this.defaults.async===!0&&r.async===!1)return i(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return i(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return i(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));if(o.hooks&&(o.hooks.options=o,o.hooks.block=e),o.async)return(async()=>{let l=o.hooks?await o.hooks.preprocess(n):n,h=await(o.hooks?await o.hooks.provideLexer(e):e?O.lex:O.lexInline)(l,o),p=o.hooks?await o.hooks.processAllTokens(h):h;o.walkTokens&&await Promise.all(this.walkTokens(p,o.walkTokens));let g=await(o.hooks?await o.hooks.provideParser(e):e?w.parse:w.parseInline)(p,o);return o.hooks?await o.hooks.postprocess(g):g})().catch(i);try{o.hooks&&(n=o.hooks.preprocess(n));let u=(o.hooks?o.hooks.provideLexer(e):e?O.lex:O.lexInline)(n,o);o.hooks&&(u=o.hooks.processAllTokens(u)),o.walkTokens&&this.walkTokens(u,o.walkTokens);let p=(o.hooks?o.hooks.provideParser(e):e?w.parse:w.parseInline)(u,o);return o.hooks&&(p=o.hooks.postprocess(p)),p}catch(l){return i(l)}}}onError(e,t){return n=>{if(n.message+=`
+Please report this to https://github.com/markedjs/marked.`,e){let s="<p>An error occurred:</p><pre>"+y(n.message+"",!0)+"</pre>";return t?Promise.resolve(s):s}if(t)return Promise.reject(n);throw n}}};var Z=new Q;function m(a,e){return Z.parse(a,e)}m.options=m.setOptions=function(a){return Z.setOptions(a),m.defaults=Z.defaults,te(m.defaults),m};m.getDefaults=I;m.defaults=P;function Ae(...a){return Z.use(...a),m.defaults=Z.defaults,te(m.defaults),m}m.use=Ae;m.walkTokens=function(a,e){return Z.walkTokens(a,e)};m.parseInline=Z.parseInline;m.Parser=w;m.parser=w.parse;m.Renderer=$;m.TextRenderer=z;m.Lexer=O;m.lexer=O.lex;m.Tokenizer=_;m.Hooks=L;m.parse=m;var Zt=m.options,vt=m.setOptions,Ht=m.walkTokens,Gt=m.parseInline,Nt=m,Qt=w.parse,jt=O.lex;
+
+if(__exports != exports)module.exports = exports;return module.exports}));
+//# sourceMappingURL=marked.umd.js.map
+
+</script>
+  <script>/* js/util.js */
+// =============================================================================
+// util.js — small helpers shared by every module
+// =============================================================================
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+function uid() {
+  return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Build an element: el('div', {class:'x', onclick: fn}, 'text', childEl, ...)
+function el(tag, attrs = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+    else if (k === 'class') n.className = v;
+    else if (k === 'html') n.innerHTML = v;
+    else if (k === 'value') n.value = v;
+    else if (k === 'checked') n.checked = !!v;
+    else n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return n;
+}
+
+// Convert a disk path (Windows or POSIX) into a file:// URL the window can load.
+function fileUrl(p) {
+  if (!p) return '';
+  let s = p.replace(/\\/g, '/');
+  if (!s.startsWith('/')) s = '/' + s;
+  return 'file://' + encodeURI(s).replace(/#/g, '%23').replace(/\?/g, '%3F');
+}
+
+// Turn a stored media reference into something <img>/<audio> can load.
+// Desktop: a disk path -> file:// URL. Browser: a reference -> blob: URL.
+async function mediaUrl(p) {
+  return window.crucible.urlFor ? window.crucible.urlFor(p) : fileUrl(p);
+}
+
+// Pickers return either plain paths (desktop) or {path, name} (browser).
+function asPick(p) {
+  if (!p) return null;
+  return typeof p === 'string' ? { path: p, name: baseName(p) } : p;
+}
+
+function baseName(p) {
+  return (p || '').split(/[\\/]/).pop();
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+function countWords(s) {
+  const m = (s || '').match(/[A-Za-z0-9À-ɏ'’-]+/g);
+  return m ? m.length : 0;
+}
+
+function fmtTime(sec) {
+  if (!isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function snippet(s, n = 160) {
+  s = (s || '').replace(/\s+/g, ' ').trim();
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+
+let toastTimer;
+function toast(msg, isErr = false, ms = 2600) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = ''), ms);
+}
+
+// ------------------------------------------------------------------ modals --
+// openModal({title, body: Node, buttons:[{label, accent, onClick -> false keeps open}], wide})
+function openModal({ title, body, buttons = [{ label: 'Close' }], wide = false, cls = '' }) {
+  const back = el('div', { class: 'modal-back' });
+  const close = () => back.remove();
+  const footer = el('footer');
+  for (const b of buttons) {
+    footer.append(el('button', {
+      class: (b.accent ? 'accent ' : '') + (b.cls || ''),
+      onclick: async () => {
+        const r = b.onClick ? await b.onClick(close) : undefined;
+        if (r !== false) close();
+      },
+    }, b.label));
+  }
+  const modal = el('div', { class: `modal ${wide ? 'wide' : ''} ${cls}` },
+    title ? el('header', {}, title) : null,
+    el('div', { class: 'mbody' }, body),
+    buttons.length ? footer : null);
+  back.append(modal);
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  const onKey = (e) => {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey, true); }
+  };
+  document.addEventListener('keydown', onKey, true);
+  $('#modalRoot').append(back);
+  setTimeout(() => modal.querySelector('input,textarea,select')?.focus(), 30);
+  return { close, modal };
+}
+
+function promptModal(title, label, initial = '', multiline = false) {
+  return new Promise((resolve) => {
+    const input = multiline
+      ? el('textarea', { rows: 4, style: 'width:100%' })
+      : el('input', { style: 'width:100%' });
+    input.value = initial;
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const { close } = openModal({
+      title,
+      body: el('div', {}, label ? el('p', { class: 'muted' }, label) : null, input),
+      buttons: [
+        { label: 'Cancel', onClick: () => finish(null) },
+        { label: 'OK', accent: true, onClick: () => finish(input.value) },
+      ],
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (!multiline || e.ctrlKey)) { e.preventDefault(); finish(input.value); close(); }
+    });
+    // Resolve null if the modal is dismissed another way.
+    const obs = new MutationObserver(() => { if (!document.body.contains(input)) { finish(null); obs.disconnect(); } });
+    obs.observe($('#modalRoot'), { childList: true });
+  });
+}
+
+function confirmModal(title, message, okLabel = 'OK') {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    openModal({
+      title,
+      body: el('p', {}, message),
+      buttons: [
+        { label: 'Cancel', onClick: () => finish(false) },
+        { label: okLabel, accent: true, onClick: () => finish(true) },
+      ],
+    });
+    const obs = new MutationObserver(() => { if (!$('#modalRoot').children.length) { finish(false); obs.disconnect(); } });
+    obs.observe($('#modalRoot'), { childList: true });
+  });
+}
+
+// --------------------------------------------------------------- word diff --
+// Word-level diff (longest common subsequence) used to show what an AI
+// revision changes. Returns HTML with <del>/<ins>.
+function diffWordsHtml(a, b) {
+  const A = a.split(/(\s+)/);
+  const B = b.split(/(\s+)/);
+  if (A.length * B.length > 4_000_000) return null; // too big to diff quickly
+  const n = A.length, m = B.length;
+  const dp = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  // Walk the table into a list of operations: '=' same, '-' removed, '+' added.
+  const ops = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { ops.push(['=', A[i]]); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) ops.push(['-', A[i++]]);
+    else ops.push(['+', B[j++]]);
+  }
+  while (i < n) ops.push(['-', A[i++]]);
+  while (j < m) ops.push(['+', B[j++]]);
+
+  // Group each run of changes into one removed phrase + one added phrase.
+  // Unchanged spaces between two changes are absorbed into the run.
+  let out = '', del = '', ins = '';
+  const flush = () => {
+    if (del) out += `<del>${escapeHtml(del)}</del>`;
+    if (ins) out += `<ins>${escapeHtml(ins)}</ins>`;
+    del = ins = '';
+  };
+  for (let k = 0; k < ops.length; k++) {
+    const [op, tok] = ops[k];
+    if (op === '-') del += tok;
+    else if (op === '+') ins += tok;
+    else if ((del || ins) && /^\s+$/.test(tok) && ops[k + 1] && ops[k + 1][0] !== '=') { del += tok; ins += tok; }
+    else { flush(); out += escapeHtml(tok); }
+  }
+  flush();
+  return out;
+}
+
+// Strip anything active from HTML produced from AI text before inserting it.
+function sanitizeHtml(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  tpl.content.querySelectorAll('script,style,iframe,object,embed,link,meta,form').forEach((n) => n.remove());
+  tpl.content.querySelectorAll('*').forEach((n) => {
+    for (const a of [...n.attributes]) {
+      if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
+    }
+  });
+  return tpl.innerHTML;
+}
+
+// Pure helpers used by the editor; kept here so they can be unit-tested.
+const TextOps = {
+  // Find the changed region between two versions of the text.
+  changedRegion(oldT, newT) {
+    let p = 0;
+    const minLen = Math.min(oldT.length, newT.length);
+    while (p < minLen && oldT.charCodeAt(p) === newT.charCodeAt(p)) p++;
+    let s = 0;
+    while (s < minLen - p && oldT.charCodeAt(oldT.length - 1 - s) === newT.charCodeAt(newT.length - 1 - s)) s++;
+    return { start: p, oldEnd: oldT.length - s, newEnd: newT.length - s };
+  },
+
+  // Move a stored {start,end} range so it still points at the same words after an edit.
+  shiftRange(r, ch) {
+    const delta = (ch.newEnd - ch.start) - (ch.oldEnd - ch.start);
+    if (r.end <= ch.start) return r;                                   // edit is after the range
+    if (r.start >= ch.oldEnd) return { start: r.start + delta, end: r.end + delta }; // edit is before
+    if (ch.start >= r.start && ch.oldEnd <= r.end) return { start: r.start, end: r.end + delta }; // edit inside
+    // partial overlap: stretch the range to cover the edited span
+    return { start: Math.min(r.start, ch.start), end: Math.max(ch.newEnd, r.end + delta) };
+  },
+
+  // Find where a stored passage is now. Prefers the stored offset, else the
+  // occurrence closest to it.
+  locate(text, item) {
+    if (!item.text) return null;
+    if (text.substr(item.start, item.text.length) === item.text) return item.start;
+    let best = null, idx = text.indexOf(item.text);
+    while (idx !== -1) {
+      if (best === null || Math.abs(idx - item.start) < Math.abs(best - item.start)) best = idx;
+      idx = text.indexOf(item.text, idx + 1);
+    }
+    return best;
+  },
+
+  // Headings → outline entries with offsets and section word counts.
+  outline(text) {
+    const out = [];
+    const re = /^(#{1,3})[ \t]+(.+?)[ \t#]*$/gm;
+    let m;
+    while ((m = re.exec(text))) out.push({ level: m[1].length, title: m[2], offset: m.index });
+    out.forEach((h, i) => {
+      const end = i + 1 < out.length ? out[i + 1].offset : text.length;
+      h.words = countWords(text.slice(h.offset + h.title.length + h.level + 1, end));
+    });
+    return out;
+  },
+
+  // Paragraph (blank-line separated block) around an offset.
+  paragraphAt(text, pos) {
+    let s = text.lastIndexOf('\n\n', Math.max(0, pos - 1));
+    s = s === -1 ? 0 : s + 2;
+    let e = text.indexOf('\n\n', pos);
+    e = e === -1 ? text.length : e;
+    return { start: s, end: e };
+  },
+};
+
+if (typeof module !== 'undefined') module.exports = { TextOps, diffWordsHtml, countWords };
+
+</script>
+  <script>/* js/platform-web.js */
+// =============================================================================
+// platform-web.js — lets Crucible run in a plain browser (Edge / Chrome)
+// -----------------------------------------------------------------------------
+// The desktop app gets `window.crucible` from preload.js (Electron). In a
+// browser there is no Electron, so this file builds the SAME API on top of
+// browser features. All the other modules don't know or care which one
+// they're talking to.
+//
+// Two storage modes:
+//
+//  FOLDER MODE (Edge/Chrome — the normal case)
+//    You pick the folder that holds your manuscript. Crucible reads and writes
+//    the real .md file, and keeps its data in a "<Book>.crucible" folder beside
+//    it — exactly the same layout as the desktop app, so both can open the
+//    same book. Browsers ask you to re-allow access to the folder once per
+//    session; that's a browser security rule, not something Crucible controls.
+//
+//  BROWSER-STORAGE MODE (fallback: Firefox/Safari, or if folder access is
+//    blocked by policy)
+//    The book lives inside the browser's own storage (IndexedDB). Use
+//    "Download .md" to get the file out. Clearing browser data erases it.
+//
+// Media references (songs, linked pictures, memory photos) can't be stored as
+// disk paths in a browser, so they're stored as short reference strings:
+//    mem:<file>        a file in the open book's memory folder
+//    h:<id>            a single file you picked (handle saved in IndexedDB)
+//    df:<dirId>/<rel>  a song inside a music folder you added
+//    sess:<id>         picked without folder access — this session only
+// =============================================================================
+
+(function () {
+  if (window.crucible) return; // running inside the desktop app
+
+  const hasFSA = typeof window.showDirectoryPicker === 'function';
+  const idOf = () => Math.random().toString(36).slice(2, 10);
+  const MAX_BACKUPS = 30;
+
+  // ------------------------------------------------------------ IndexedDB --
+  const DB = {
+    _db: null,
+    open() {
+      if (this._db) return Promise.resolve(this._db);
+      return new Promise((res, rej) => {
+        const r = indexedDB.open('crucible', 1);
+        r.onupgradeneeded = () => {
+          r.result.createObjectStore('kv');   // settings, handles, recent
+          r.result.createObjectStore('vfs');  // browser-storage-mode files
+        };
+        r.onsuccess = () => res((this._db = r.result));
+        r.onerror = () => rej(r.error);
+      });
+    },
+    async tx(store, mode, fn) {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const t = db.transaction(store, mode);
+        const req = fn(t.objectStore(store));
+        t.oncomplete = () => res(req && req.result);
+        t.onerror = () => rej(t.error);
+        t.onabort = () => rej(t.error || new Error('Storage aborted (browser storage full?)'));
+      });
+    },
+    get: (s, k) => DB.tx(s, 'readonly', (o) => o.get(k)),
+    set: (s, k, v) => DB.tx(s, 'readwrite', (o) => o.put(v, k)),
+    del: (s, k) => DB.tx(s, 'readwrite', (o) => o.delete(k)),
+    keys: (s) => DB.tx(s, 'readonly', (o) => o.getAllKeys()),
+  };
+
+  async function ensurePerm(handle, mode = 'read') {
+    if (!handle.queryPermission) return true;
+    if ((await handle.queryPermission({ mode })) === 'granted') return true;
+    try {
+      return (await handle.requestPermission({ mode })) === 'granted';
+    } catch {
+      return false; // no user gesture available
+    }
+  }
+
+  // ------------------------------------------------------- storage roots --
+  // A "root" is the folder that holds the book. Same methods for both modes.
+  class FolderRoot {
+    constructor(dir) { this.dir = dir; this.kind = 'folder'; }
+    async _parent(rel, create) {
+      const parts = rel.split('/').filter(Boolean);
+      const name = parts.pop();
+      let d = this.dir;
+      for (const p of parts) d = await d.getDirectoryHandle(p, { create });
+      return { d, name };
+    }
+    async read(rel, blob = false) {
+      try {
+        const { d, name } = await this._parent(rel, false);
+        const f = await (await d.getFileHandle(name)).getFile();
+        return blob ? f : await f.text();
+      } catch { return null; }
+    }
+    async write(rel, data) {
+      const { d, name } = await this._parent(rel, true);
+      const fh = await d.getFileHandle(name, { create: true });
+      const w = await fh.createWritable();
+      await w.write(data);
+      await w.close();
+    }
+    async list(relDir) {
+      try {
+        let d = this.dir;
+        for (const p of relDir.split('/').filter(Boolean)) d = await d.getDirectoryHandle(p);
+        const out = [];
+        for await (const [name, h] of d.entries()) if (h.kind === 'file') out.push(name);
+        return out;
+      } catch { return []; }
+    }
+    async remove(rel) {
+      try { const { d, name } = await this._parent(rel, false); await d.removeEntry(name); } catch { /* gone */ }
+    }
+    async exists(rel) { return (await this.read(rel, true)) !== null; }
+  }
+
+  class BrowserRoot {
+    constructor(prefix) { this.prefix = prefix; this.kind = 'browser'; }
+    async read(rel, blob = false) {
+      const v = await DB.get('vfs', this.prefix + rel);
+      if (v === undefined) return null;
+      if (blob) return v instanceof Blob ? v : new Blob([v]);
+      return v instanceof Blob ? v.text() : v;
+    }
+    write(rel, data) { return DB.set('vfs', this.prefix + rel, data); }
+    async list(relDir) {
+      const pre = this.prefix + relDir.replace(/\/?$/, '/');
+      return (await DB.keys('vfs')).filter((k) => k.startsWith(pre) && !k.slice(pre.length).includes('/')).map((k) => k.slice(pre.length));
+    }
+    remove(rel) { return DB.del('vfs', this.prefix + rel); }
+    async exists(rel) { return (await DB.get('vfs', this.prefix + rel)) !== undefined; }
+  }
+
+  // The open book: key looks like "Folder/Book.md" (also what you see in the UI).
+  const books = new Map(); // key -> { root, file }
+  const sidecarOf = (file) => file.replace(/\.[^.]+$/, '') + '.crucible';
+  const bookOf = (key) => {
+    const b = books.get(key);
+    if (!b) throw new Error('That book is no longer open — open it again.');
+    return b;
+  };
+
+  async function rememberBook(key, root, file) {
+    books.set(key, { root, file });
+    if (root.kind === 'folder') await DB.set('kv', 'book:' + key, { dir: root.dir, file });
+    else await DB.set('kv', 'book:' + key, { browser: root.prefix, file });
+    const s = await loadSettings();
+    s.recent = [key, ...(s.recent || []).filter((r) => r !== key)].slice(0, 10);
+    await DB.set('kv', 'settings', s);
+  }
+
+  async function loadAt(key) {
+    const { root, file } = bookOf(key);
+    const text = await root.read(file);
+    if (text === null) throw new Error(`Couldn't read ${file}`);
+    let project = {};
+    try { project = JSON.parse((await root.read(`${sidecarOf(file)}/project.json`)) || '{}'); } catch { /* fresh */ }
+    return { path: key, text: text.replace(/\r\n/g, '\n'), project, sidecar: `${key.split('/')[0]}/${sidecarOf(file)}` };
+  }
+
+  // Simple choose-from-list modal (uses the shared modal helpers in util.js).
+  function chooseFrom(title, items) {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      const list = el('div', { class: 'pick-list' });
+      let m;
+      items.forEach((it) => list.append(el('div', { class: 'mi', onclick: () => { finish(it); m.close(); } }, it)));
+      m = openModal({ title, body: list, buttons: [{ label: 'Cancel', onClick: () => finish(null) }] });
+      const obs = new MutationObserver(() => { if (!document.body.contains(list)) { finish(null); obs.disconnect(); } });
+      obs.observe($('#modalRoot'), { childList: true });
+    });
+  }
+
+  // <input type=file> picker for browsers without folder access.
+  function inputPick({ accept = '', multiple = false } = {}) {
+    return new Promise((resolve) => {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = accept;
+      inp.multiple = multiple;
+      inp.onchange = () => resolve([...inp.files]);
+      inp.addEventListener('cancel', () => resolve([]));
+      inp.click();
+    });
+  }
+
+  const isAbort = (e) => e && (e.name === 'AbortError');
+  let folderBlocked = false; // set if the browser/policy refuses folder access
+  const folderMode = () => hasFSA && !folderBlocked;
+
+  async function pickDir(id) {
+    try {
+      return await window.showDirectoryPicker({ id, mode: 'readwrite' });
+    } catch (e) {
+      if (isAbort(e)) return null;
+      folderBlocked = true;
+      toast('Folder access is blocked in this browser — using browser storage instead.', true, 6000);
+      return undefined; // signals "fall back"
+    }
+  }
+
+  // ------------------------------------------------------------- settings --
+  function defaultSettings() {
+    return { providers: [], activeProviderId: null, playlist: [], volume: 0.7, ui: { theme: 'dark', fontSize: 17, view: 'edit' }, recent: [] };
+  }
+  async function loadSettings() {
+    const s = Object.assign(defaultSettings(), (await DB.get('kv', 'settings')) || {});
+    s.ui = Object.assign(defaultSettings().ui, s.ui || {});
+    return s;
+  }
+  function publicSettings(s) {
+    return { ...s, providers: s.providers.map((p) => ({ ...p, apiKey: undefined, hasKey: !!p.apiKey })) };
+  }
+  async function saveSettings(incoming) {
+    const cur = await loadSettings();
+    const next = { ...cur, ...incoming };
+    if (incoming.providers) {
+      next.providers = incoming.providers.map((p) => {
+        const old = cur.providers.find((o) => o.id === p.id);
+        let apiKey = old ? old.apiKey : '';
+        if (typeof p.newApiKey === 'string' && p.newApiKey.trim()) apiKey = p.newApiKey.trim();
+        const { newApiKey, hasKey, ...rest } = p;
+        return { ...rest, id: p.id || idOf(), apiKey };
+      });
+    }
+    await DB.set('kv', 'settings', next);
+    return publicSettings(next);
+  }
+
+  // ---------------------------------------------------------- media refs --
+  const sessionBlobs = new Map(); // sess:<id> -> File
+  const urlCache = new Map();     // ref -> object URL
+  let currentKey = null;
+
+  async function blobFor(ref) {
+    if (ref.startsWith('sess:')) return sessionBlobs.get(ref) || null;
+    if (ref.startsWith('mem:')) {
+      const { root, file } = bookOf(currentKey);
+      return root.read(`${sidecarOf(file)}/memory/${ref.slice(4)}`, true);
+    }
+    if (ref.startsWith('h:')) {
+      const rec = await DB.get('kv', 'handle:' + ref.slice(2));
+      if (!rec) return null;
+      if (rec.blob) return rec.blob;
+      if (!(await ensurePerm(rec.handle))) throw new Error('Permission to read that file was not given.');
+      return rec.handle.getFile();
+    }
+    if (ref.startsWith('df:')) {
+      const [dirId, ...rest] = ref.slice(3).split('/');
+      const rec = await DB.get('kv', 'dir:' + dirId);
+      if (!rec) return null;
+      if (!(await ensurePerm(rec.handle))) throw new Error(`Permission to read the "${rec.handle.name}" folder was not given.`);
+      let d = rec.handle;
+      const parts = rest.map(decodeURIComponent);
+      const name = parts.pop();
+      for (const p of parts) d = await d.getDirectoryHandle(p);
+      return (await d.getFileHandle(name)).getFile();
+    }
+    return null;
+  }
+
+  async function urlFor(ref) {
+    if (!ref) return '';
+    if (urlCache.has(ref)) return urlCache.get(ref);
+    const b = await blobFor(ref);
+    if (!b) throw new Error('File not found');
+    const u = URL.createObjectURL(b);
+    urlCache.set(ref, u);
+    return u;
+  }
+
+  function forgetUrls(prefix) {
+    for (const [k, u] of urlCache) if (k.startsWith(prefix)) { URL.revokeObjectURL(u); urlCache.delete(k); }
+  }
+
+  async function exists(ref) {
+    if (!ref) return false;
+    if (ref.startsWith('sess:')) return sessionBlobs.has(ref);
+    if (ref.startsWith('mem:')) return currentKey && books.has(currentKey) && bookOf(currentKey).root.exists(`${sidecarOf(bookOf(currentKey).file)}/memory/${ref.slice(4)}`);
+    if (ref.startsWith('h:')) return !!(await DB.get('kv', 'handle:' + ref.slice(2)));
+    if (ref.startsWith('df:')) return !!(await DB.get('kv', 'dir:' + ref.slice(3).split('/')[0]));
+    return !!(await DB.get('kv', 'book:' + ref));
+  }
+
+  // Pick single files and remember them. Returns [{path: ref, name}]
+  async function pickFiles(accept, exts, multiple) {
+    if (folderMode() && window.showOpenFilePicker) {
+      let hs;
+      try {
+        hs = await window.showOpenFilePicker({ multiple, types: [{ description: 'Files', accept: { [accept]: exts } }] });
+      } catch (e) { if (isAbort(e)) return []; hs = null; }
+      if (hs) {
+        const out = [];
+        for (const h of hs) {
+          const id = idOf();
+          await DB.set('kv', 'handle:' + id, { handle: h });
+          out.push({ path: 'h:' + id, name: h.name, file: await h.getFile() });
+        }
+        return out;
+      }
+    }
+    return (await inputPick({ accept: exts.join(','), multiple })).map((f) => {
+      const id = 'sess:' + idOf();
+      sessionBlobs.set(id, f);
+      return { path: id, name: f.name, file: f };
+    });
+  }
+
+  const AUDIO = ['.mp3', '.m4a', '.ogg', '.wav', '.flac', '.aac'];
+  const IMAGES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+  const TEXTS = ['.md', '.markdown', '.txt'];
+  const extOf = (n) => (n.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+  const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp' };
+
+  // ------------------------------------------------------------------ AI --
+  function blobToBase64(b) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1]);
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(b);
+    });
+  }
+
+  async function callAI({ providerId, system, messages, imageFiles }) {
+    const s = await loadSettings();
+    const p = s.providers.find((x) => x.id === (providerId || s.activeProviderId));
+    if (!p) throw new Error('No AI provider selected. Add one in Settings.');
+    const key = p.apiKey || '';
+    const images = [];
+    for (const f of imageFiles || []) {
+      try {
+        const b = await blobFor('mem:' + f);
+        if (b) images.push({ mime: MIME[extOf(f)] || 'image/png', data: await blobToBase64(b) });
+      } catch { /* skip */ }
+    }
+    const lastUser = messages.map((m) => m.role).lastIndexOf('user');
+    const maxTokens = Number(p.maxTokens) || 4096;
+    const temperature = p.temperature === '' || p.temperature == null ? undefined : Number(p.temperature);
+    const timeoutMs = (Number(p.timeoutSec) || 180) * 1000;
+    const trim = (u) => (u || '').replace(/\/+$/, '');
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+
+    const post = async (url, headers, body) => {
+      let r;
+      try {
+        r = await fetch(url, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+      } catch (e) {
+        if (e.name === 'AbortError') throw new Error(`The AI didn't answer within ${timeoutMs / 1000}s.`);
+        throw new Error(`Couldn't reach ${new URL(url).host}. The server may be down, blocked by your network, or not allowing browser requests (for Ollama set OLLAMA_ORIGINS=*; for LM Studio turn on "Enable CORS").`);
+      }
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error?.message || j.message || `HTTP ${r.status}`);
+      return j;
+    };
+
+    try {
+      if (p.type === 'anthropic') {
+        const msgs = messages.map((m, i) => (i === lastUser && images.length
+          ? { role: 'user', content: [...images.map((im) => ({ type: 'image', source: { type: 'base64', media_type: im.mime, data: im.data } })), { type: 'text', text: m.content }] }
+          : { role: m.role, content: m.content }));
+        const body = { model: p.model, max_tokens: maxTokens, system, messages: msgs };
+        if (temperature !== undefined) body.temperature = temperature;
+        const j = await post(`${trim(p.baseUrl) || 'https://api.anthropic.com'}/v1/messages`, {
+          'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true',
+        }, body);
+        return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n');
+      }
+      if (p.type === 'gemini') {
+        const contents = messages.map((m, i) => {
+          const parts = [{ text: m.content }];
+          if (i === lastUser) images.forEach((im) => parts.unshift({ inline_data: { mime_type: im.mime, data: im.data } }));
+          return { role: m.role === 'assistant' ? 'model' : 'user', parts };
+        });
+        const base = trim(p.baseUrl) || 'https://generativelanguage.googleapis.com/v1beta';
+        const j = await post(`${base}/models/${encodeURIComponent(p.model)}:generateContent`, { 'x-goog-api-key': key }, {
+          system_instruction: { parts: [{ text: system }] }, contents,
+          generationConfig: { maxOutputTokens: maxTokens, ...(temperature !== undefined ? { temperature } : {}) },
+        });
+        return (j.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('');
+      }
+      const msgs = [{ role: 'system', content: system }];
+      messages.forEach((m, i) => msgs.push(i === lastUser && images.length
+        ? { role: 'user', content: [...images.map((im) => ({ type: 'image_url', image_url: { url: `data:${im.mime};base64,${im.data}` } })), { type: 'text', text: m.content }] }
+        : { role: m.role, content: m.content }));
+      const body = { model: p.model, messages: msgs, max_tokens: maxTokens };
+      if (temperature !== undefined) body.temperature = temperature;
+      const j = await post(`${trim(p.baseUrl) || 'https://api.openai.com/v1'}/chat/completions`, key ? { authorization: `Bearer ${key}` } : {}, body);
+      return j.choices?.[0]?.message?.content || '';
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // ------------------------------------------------------------- export --
+  function printHtml(html, title) {
+    return new Promise((resolve) => {
+      const fr = document.createElement('iframe');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+      fr.srcdoc = html;
+      fr.onload = () => {
+        const oldTitle = document.title;
+        document.title = title; // becomes the suggested PDF file name
+        setTimeout(() => {
+          try { fr.contentWindow.focus(); fr.contentWindow.print(); } finally {
+            document.title = oldTitle;
+            setTimeout(() => fr.remove(), 1000);
+            resolve();
+          }
+        }, 150);
+      };
+      document.body.append(fr);
+    });
+  }
+
+  // -------------------------------------------------------------- dirty --
+  let dirty = false;
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // =============================================================== API ====
+  window.crucible = {
+    platform: 'web',
+    cssPaging: true,
+    get storageMode() { return folderMode() ? 'folder' : 'browser'; },
+
+    // ---------------------------------------------------------- books ----
+    async openBook() {
+      if (folderMode()) {
+        const dir = await pickDir('crucible-book');
+        if (dir === null) return null;
+        if (dir) {
+          const files = (await new FolderRoot(dir).list('')).filter((n) => TEXTS.includes(extOf(n))).sort();
+          if (!files.length) { toast(`No .md file in "${dir.name}". Pick the folder that contains your manuscript.`, true, 6000); return null; }
+          const file = files.length === 1 ? files[0] : await chooseFrom(`Which manuscript in "${dir.name}"?`, files);
+          if (!file) return null;
+          const key = `${dir.name}/${file}`;
+          await rememberBook(key, new FolderRoot(dir), file);
+          currentKey = key;
+          forgetUrls('mem:');
+          return loadAt(key);
+        }
+      }
+      // Browser-storage mode: copy the chosen file into the browser.
+      const [f] = await inputPick({ accept: '.md,.markdown,.txt' });
+      if (!f) return null;
+      const key = `Browser storage/${f.name}`;
+      const root = new BrowserRoot(`${f.name}/`);
+      if (!(await root.exists(f.name))) await root.write(f.name, await f.text());
+      else if (await confirmModal('Already in browser storage', `"${f.name}" is already stored in this browser. Replace that copy with the file you just picked? (Change pool, memory and chat are kept either way.)`, 'Replace')) {
+        await root.write(f.name, await f.text());
+      }
+      await rememberBook(key, root, f.name);
+      currentKey = key;
+      forgetUrls('mem:');
+      return loadAt(key);
+    },
+
+    async openBookPath(key) {
+      const rec = await DB.get('kv', 'book:' + key);
+      if (!rec) throw new Error('Crucible no longer has access to that book — use Open.');
+      if (rec.dir) {
+        if (!(await ensurePerm(rec.dir, 'readwrite'))) throw new Error('Folder access was not allowed.');
+        books.set(key, { root: new FolderRoot(rec.dir), file: rec.file });
+      } else books.set(key, { root: new BrowserRoot(rec.browser), file: rec.file });
+      await rememberBook(key, books.get(key).root, rec.file);
+      currentKey = key;
+      forgetUrls('mem:');
+      return loadAt(key);
+    },
+
+    async saveBook({ bookPath, text, project }) {
+      const { root, file } = bookOf(bookPath);
+      const side = sidecarOf(file);
+      const old = await root.read(file);
+      if (old !== null && old !== text) {
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const base = file.replace(/\.[^.]+$/, '');
+        await root.write(`${side}/backups/${base}_${stamp}.md`, old);
+        const all = (await root.list(`${side}/backups`)).filter((f) => f.endsWith('.md')).sort();
+        for (const o of all.slice(0, Math.max(0, all.length - MAX_BACKUPS))) await root.remove(`${side}/backups/${o}`);
+      }
+      await root.write(file, text);
+      await root.write(`${side}/project.json`, JSON.stringify(project, null, 2));
+      return { ok: true, savedAt: Date.now() };
+    },
+
+    async saveBookAs({ text, project, currentPath }) {
+      let name = await promptModal('Save manuscript as', 'File name', currentPath ? currentPath.split('/').pop() : 'Untitled.md');
+      if (!name) return null;
+      name = name.replace(/[\\/:*?"<>|]+/g, '').trim();
+      if (!/\.(md|markdown|txt)$/i.test(name)) name += '.md';
+      let root, key;
+      if (folderMode()) {
+        const dir = await pickDir('crucible-book');
+        if (dir === null) return null;
+        if (dir) { root = new FolderRoot(dir); key = `${dir.name}/${name}`; }
+      }
+      if (!root) { root = new BrowserRoot(`${name}/`); key = `Browser storage/${name}`; }
+      if (await root.exists(name) && !(await confirmModal('Replace file?', `"${name}" already exists there. Replace it?`, 'Replace'))) return null;
+      // Carry story memory across to the new location.
+      if (currentPath && books.has(currentPath)) {
+        const from = bookOf(currentPath);
+        const memDir = `${sidecarOf(from.file)}/memory`;
+        for (const f of await from.root.list(memDir)) {
+          await root.write(`${sidecarOf(name)}/memory/${f}`, await from.root.read(`${memDir}/${f}`, true));
+        }
+      }
+      books.set(key, { root, file: name });
+      const r = await this.saveBook({ bookPath: key, text, project });
+      await rememberBook(key, root, name);
+      currentKey = key;
+      forgetUrls('mem:');
+      return { ...r, path: key, sidecar: sidecarOf(name) };
+    },
+
+    async listBackups(bookPath) {
+      const { root, file } = bookOf(bookPath);
+      return (await root.list(`${sidecarOf(file)}/backups`)).filter((f) => f.endsWith('.md')).sort().reverse();
+    },
+    async readBackup({ bookPath, name }) {
+      const { root, file } = bookOf(bookPath);
+      return (await root.read(`${sidecarOf(file)}/backups/${name}`)) || '';
+    },
+
+    // Download the manuscript (main way out of browser-storage mode).
+    downloadText(name, text) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }));
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    },
+
+    // --------------------------------------------------------- memory ----
+    async addMemory(bookPath) {
+      const { root, file } = bookOf(bookPath);
+      const picked = await pickFiles('application/octet-stream', [...IMAGES, ...TEXTS], true);
+      const items = [];
+      for (const p of picked) {
+        const ext = extOf(p.name);
+        const kind = IMAGES.includes(ext) ? 'image' : TEXTS.includes(ext) ? 'text' : null;
+        if (!kind) continue;
+        const id = idOf();
+        const stored = `${id}_${p.name}`;
+        await root.write(`${sidecarOf(file)}/memory/${stored}`, p.file);
+        items.push({ id, kind, name: p.name, file: stored, notes: '', tags: '', includeInAI: true, sendImage: false, added: Date.now() });
+        // The copy now lives with the book; drop the temporary pick.
+        if (p.path.startsWith('h:')) await DB.del('kv', 'handle:' + p.path.slice(2));
+        if (p.path.startsWith('sess:')) sessionBlobs.delete(p.path);
+      }
+      return items;
+    },
+    async newMemoryNote({ bookPath, name }) {
+      const { root, file } = bookOf(bookPath);
+      const id = idOf();
+      const safe = (name || 'note').replace(/[^\w\- ]+/g, '').trim() || 'note';
+      const stored = `${id}_${safe}.md`;
+      await root.write(`${sidecarOf(file)}/memory/${stored}`, `# ${name || 'Note'}\n\n`);
+      return { id, kind: 'text', name: `${safe}.md`, file: stored, notes: '', tags: '', includeInAI: true, sendImage: false, added: Date.now() };
+    },
+    async readMemoryText({ bookPath, file: f }) {
+      const { root, file } = bookOf(bookPath);
+      return (await root.read(`${sidecarOf(file)}/memory/${f}`)) || '';
+    },
+    async writeMemoryText({ bookPath, file: f, text }) {
+      const { root, file } = bookOf(bookPath);
+      await root.write(`${sidecarOf(file)}/memory/${f}`, text);
+    },
+    memoryPath: async ({ file }) => 'mem:' + file,
+    async deleteMemory({ bookPath, file: f }) {
+      const { root, file } = bookOf(bookPath);
+      await root.remove(`${sidecarOf(file)}/memory/${f}`);
+      forgetUrls('mem:' + f);
+    },
+
+    // ---------------------------------------------------- music & files ----
+    pickSongs: () => pickFiles('audio/*', AUDIO, true).then((a) => a.map(({ path, name }) => ({ path, name }))),
+    async pickMusicFolder() {
+      if (!folderMode()) {
+        toast('This browser can\'t open folders — pick the songs instead (they\'ll play this session).', true, 5000);
+        return this.pickSongs();
+      }
+      let dir;
+      try { dir = await window.showDirectoryPicker({ id: 'crucible-music', mode: 'read' }); } catch { return []; }
+      const dirId = idOf();
+      await DB.set('kv', 'dir:' + dirId, { handle: dir });
+      const out = [];
+      const walk = async (d, rel, depth) => {
+        if (depth > 4) return;
+        for await (const [name, h] of d.entries()) {
+          if (h.kind === 'directory') await walk(h, [...rel, name], depth + 1);
+          else if (AUDIO.includes(extOf(name))) out.push({ path: `df:${dirId}/${[...rel, name].map(encodeURIComponent).join('/')}`, name: name.replace(/\.[^.]+$/, '') });
+        }
+      };
+      await walk(dir, [], 0);
+      return out.sort((a, b) => a.path.localeCompare(b.path));
+    },
+    pickImage: () => pickFiles('image/*', IMAGES, false).then((a) => (a[0] ? { path: a[0].path, name: a[0].name } : null)),
+    fileExists: exists,
+    urlFor,
+    reveal: () => toast('Browsers can\'t open folders in Explorer — the file is in the folder you chose.'),
+
+    // ----------------------------------------------------------- misc ----
+    getSettings: async () => publicSettings(await loadSettings()),
+    saveSettings,
+    aiChat: async (args) => {
+      try { return { ok: true, text: await callAI(args) }; } catch (e) { return { ok: false, error: e.message }; }
+    },
+    async exportPdf({ html, suggestedName }) {
+      await printHtml(html, (suggestedName || 'book.pdf').replace(/\.pdf$/i, ''));
+      return { ok: true, printed: true };
+    },
+    replaceMisspelling: async () => {},
+    onSpelling: () => {},
+    setDirty: (d) => { dirty = !!d; },
+    setTitle: (t) => { document.title = t; },
+    onSaveAndQuit: () => {},
+    quitNow: () => {},
+  };
+})();
+
+</script>
+  <script>/* js/state.js */
+// =============================================================================
+// state.js — the single place where the app's live data lives
+// -----------------------------------------------------------------------------
+// S.path      full path of the open .md file (null for an unsaved book)
+// S.project   everything stored in <book>.crucible/project.json:
+//               pool[]    passages you flagged for change
+//               links[]   songs/pictures tied to passages (paths only)
+//               memory[]  photos + fact files the AI reads
+//               chat[]    the AI desk conversation
+//               meta{}    title, author, export options, etc.
+// S.settings  global app settings (AI providers, playlist, theme)
+// The manuscript text itself is the editor's value: editor.value.
+// =============================================================================
+
+const S = {
+  path: null,
+  sidecar: null,
+  project: null,
+  settings: null,
+  dirty: false,
+  lastSaved: null,
+};
+
+function blankProject() {
+  return { version: 1, pool: [], links: [], memory: [], chat: [], meta: { negotiate: [] } };
+}
+
+// Tiny event bus so modules can react to each other without tangling.
+const Bus = {
+  handlers: {},
+  on(evt, fn) { (this.handlers[evt] ||= []).push(fn); },
+  emit(evt, data) { (this.handlers[evt] || []).forEach((fn) => fn(data)); },
+};
+
+function markDirty(on = true) {
+  if (S.dirty === on) return;
+  S.dirty = on;
+  window.crucible.setDirty(on);
+  updateTitle();
+}
+
+function updateTitle() {
+  const name = S.path ? baseName(S.path) : 'Untitled';
+  window.crucible.setTitle(`${S.dirty ? '• ' : ''}${name} — Crucible`);
+  $('#stFile').textContent = S.path || 'Unsaved manuscript';
+  $('#stDirty').textContent = S.dirty ? 'unsaved changes' : (S.lastSaved ? `saved ${new Date(S.lastSaved).toLocaleTimeString()}` : '');
+}
+
+async function persistSettings(partial) {
+  S.settings = await window.crucible.saveSettings(partial);
+  Bus.emit('settings', S.settings);
+}
+
+</script>
+  <script>/* js/editor.js */
+// =============================================================================
+// editor.js — the manuscript editor
+// -----------------------------------------------------------------------------
+// The editor is a plain <textarea>. That's deliberate: it handles a 150,000-word
+// file smoothly, keeps exact character positions (which the change pool and
+// links rely on), and gives native spell-check and Ctrl+Z undo for free.
+//
+// Every programmatic change (AI revision, replace, restore) goes through
+// Editor.replaceRange(), which uses the browser's insertText command so it
+// lands on the normal undo stack — Ctrl+Z undoes an AI change like any typing.
+// =============================================================================
+
+const Editor = {
+  ta: null,
+  lastText: '',
+  outline: [],
+  spell: { word: '', suggestions: [] },
+
+  init() {
+    this.ta = $('#editor');
+    this.ta.addEventListener('input', () => this.onInput());
+    this.ta.addEventListener('keyup', () => this.onCaret());
+    this.ta.addEventListener('mouseup', () => this.onCaret());
+    this.ta.addEventListener('scroll', debounce(() => this.syncPreviewScroll(), 30));
+    this.ta.addEventListener('contextmenu', (e) => this.showContextMenu(e));
+    this.ta.addEventListener('keydown', (e) => this.onKeyDown(e));
+    document.addEventListener('mousedown', (e) => {
+      if (!$('#ctxMenu').contains(e.target)) $('#ctxMenu').classList.add('hidden');
+    });
+    window.crucible.onSpelling((d) => {
+      this.spell = d;
+      if (!$('#ctxMenu').classList.contains('hidden') && d.word) this.renderContextMenu(this._ctxPos);
+    });
+    $$('#viewSeg button').forEach((b) => b.addEventListener('click', () => this.setView(b.dataset.view)));
+    this.initFind();
+  },
+
+  get text() { return this.ta.value; },
+
+  // Load a whole new manuscript (clears undo history; that's expected on open).
+  setText(t) {
+    this.ta.value = t;
+    this.lastText = t;
+    this.ta.setSelectionRange(0, 0);
+    this.ta.scrollTop = 0;
+    this.refreshAll();
+  },
+
+  // ---------------------------------------------------------------- input --
+  onInput() {
+    const now = this.ta.value;
+    if (now === this.lastText) return;
+    if (this.bulk) {
+      // Whole-document changes (replace all, restore backup) are re-anchored
+      // by searching for each passage's text afterwards instead.
+      this.bulk = false;
+    } else {
+      const ch = TextOps.changedRegion(this.lastText, now);
+      // Keep every stored passage pointing at the same words after the edit.
+      Bus.emit('textChange', { change: ch, text: now });
+    }
+    this.lastText = now;
+    markDirty(true);
+    this.refreshSoon();
+  },
+
+  refreshSoon: debounce(function () { Editor.refreshAll(); }, 350),
+
+  refreshAll() {
+    this.outline = TextOps.outline(this.ta.value);
+    this.renderOutline();
+    $('#stWords').textContent = `${countWords(this.ta.value).toLocaleString()} words`;
+    if ($('#editorWrap').dataset.view !== 'edit') this.renderPreview();
+    this.onCaret();
+  },
+
+  onCaret() {
+    const { selectionStart: a, selectionEnd: b } = this.ta;
+    $('#stSel').textContent = b > a ? `${countWords(this.ta.value.slice(a, b))} selected` : '';
+    const cur = this.chapterAt(a);
+    $('#stChapter').textContent = cur ? cur.title : '';
+    $$('#outline .ol-item').forEach((n) => n.classList.toggle('cur', cur && +n.dataset.offset === cur.offset));
+    Bus.emit('caret', a);
+  },
+
+  onKeyDown(e) {
+    // Ctrl+Shift+A: add selection to the change pool
+    if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') || (e.altKey && !e.ctrlKey && e.key.toLowerCase() === 'a')) {
+      e.preventDefault();
+      Pool.addFromSelection();
+    }
+  },
+
+  // ------------------------------------------------------------- geometry --
+  chapterAt(pos) {
+    let cur = null;
+    for (const h of this.outline) { if (h.offset <= pos) cur = h; else break; }
+    return cur;
+  },
+
+  // Textareas can't tell you the pixel height of a character offset, so we
+  // measure it with an invisible copy of the editor ("mirror") holding the
+  // text up to that point.
+  offsetTop(pos) {
+    const cs = getComputedStyle(this.ta);
+    let m = this._mirror;
+    if (!m) {
+      m = this._mirror = document.createElement('div');
+      Object.assign(m.style, { position: 'absolute', visibility: 'hidden', top: '0', left: '-9999px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word' });
+      document.body.append(m);
+    }
+    for (const p of ['fontFamily', 'fontSize', 'lineHeight', 'paddingLeft', 'paddingRight', 'paddingTop', 'letterSpacing', 'tabSize', 'boxSizing']) m.style[p] = cs[p];
+    m.style.width = this.ta.clientWidth + 'px';
+    m.textContent = this.ta.value.slice(0, pos) + '​';
+    return m.scrollHeight;
+  },
+
+  // Select a range and scroll it to about a third of the way down the screen.
+  reveal(start, end = start, focus = true) {
+    if ($('#editorWrap').dataset.view === 'preview') this.setView('split');
+    if (focus) this.ta.focus();
+    this.ta.setSelectionRange(start, end);
+    const y = this.offsetTop(start);
+    this.ta.scrollTop = Math.max(0, y - this.ta.clientHeight / 3);
+    this.onCaret();
+  },
+
+  // Undo-friendly replacement of [start,end) with new text.
+  replaceRange(start, end, text) {
+    this.ta.focus();
+    this.ta.setSelectionRange(start, end);
+    const ok = document.execCommand('insertText', false, text);
+    if (!ok) {
+      // Fallback (no undo) if the command is unavailable.
+      this.ta.setRangeText(text, start, end, 'end');
+      this.onInput();
+    }
+  },
+
+  // Replace the whole manuscript but keep it undoable.
+  // transform(passageText) tells linked passages how their own text changed.
+  replaceAll(text, transform = (t) => t) {
+    this.bulk = true;
+    this.replaceRange(0, this.ta.value.length, text);
+    this.bulk = false;
+    this.ta.setSelectionRange(0, 0);
+    Bus.emit('relocate', { text: this.ta.value, transform });
+  },
+
+  selection() {
+    const { selectionStart: start, selectionEnd: end } = this.ta;
+    return { start, end, text: this.ta.value.slice(start, end) };
+  },
+
+  // ---------------------------------------------------------------- views --
+  setView(v) {
+    $('#editorWrap').dataset.view = v;
+    $$('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.view === v));
+    if (v !== 'edit') this.renderPreview();
+    if (S.settings && S.settings.ui.view !== v) persistSettings({ ui: { ...S.settings.ui, view: v } });
+  },
+
+  renderPreview() {
+    const html = marked.parse(this.ta.value.replace(/<!--[\s\S]*?-->/g, ''));
+    $('#preview').innerHTML = sanitizeHtml(html);
+  },
+
+  syncPreviewScroll() {
+    if ($('#editorWrap').dataset.view !== 'split') return;
+    const ta = this.ta, pv = $('#previewPane');
+    const ratio = ta.scrollTop / Math.max(1, ta.scrollHeight - ta.clientHeight);
+    pv.scrollTop = ratio * (pv.scrollHeight - pv.clientHeight);
+  },
+
+  renderOutline() {
+    const box = $('#outline');
+    box.innerHTML = '';
+    if (!this.outline.length) {
+      box.append(el('div', { class: 'empty' }, 'Chapters appear here from your Markdown headings (# Chapter One, ## Scene…).'));
+      return;
+    }
+    for (const h of this.outline) {
+      box.append(el('div', {
+        class: `ol-item ol-${h.level}`,
+        'data-offset': h.offset,
+        title: h.title,
+        onclick: () => this.reveal(h.offset),
+      }, el('span', { class: 'wc' }, h.words.toLocaleString()), h.title));
+    }
+  },
+
+  // --------------------------------------------------------- context menu --
+  showContextMenu(e) {
+    if (e.shiftKey) return; // Shift+right-click: let the browser show its own menu (spelling suggestions)
+    e.preventDefault();
+    this.spell = { word: '', suggestions: [] }; // fresh; main process will fill it in
+    this._ctxPos = { x: e.clientX, y: e.clientY };
+    this.renderContextMenu(this._ctxPos);
+  },
+
+  renderContextMenu({ x, y }) {
+    const menu = $('#ctxMenu');
+    const sel = this.selection();
+    const has = sel.end > sel.start;
+    const item = (label, fn, opts = {}) => el('div', {
+      class: `mi ${opts.hot ? 'hot' : ''} ${opts.disabled ? 'disabled' : ''}`,
+      onmousedown: (ev) => { ev.preventDefault(); menu.classList.add('hidden'); fn(); },
+    }, label, opts.key ? el('span', { class: 'k' }, opts.key) : null);
+    const sep = () => el('div', { class: 'sep' });
+
+    menu.innerHTML = '';
+    if (this.spell.word) {
+      const sugg = this.spell.suggestions.slice(0, 5);
+      if (sugg.length) sugg.forEach((w) => menu.append(item(w, () => window.crucible.replaceMisspelling(w), { hot: true })));
+      else menu.append(item('No spelling suggestions', () => {}, { disabled: true }));
+      menu.append(sep());
+    }
+    menu.append(
+      item('✚  Add to change pool', () => Pool.addFromSelection(), { hot: true, disabled: !has, key: window.crucible.platform === 'web' ? 'Alt+A' : 'Ctrl+Shift+A' }),
+      item('✎  Add to pool with a note…', () => Pool.addFromSelection(true), { disabled: !has }),
+      item('⚒  Negotiate this with AI now', () => Pool.addFromSelection(false, true), { disabled: !has }),
+      sep(),
+      item(`♪  Link a song${has ? '' : ' to this paragraph'}…`, () => Links.startLink('song')),
+      item(`▣  Link a picture${has ? '' : ' to this paragraph'}…`, () => Links.startLink('image')),
+      window.crucible.platform === 'web' ? el('div', { class: 'mi disabled', style: 'font-size:11px' }, 'Shift+right-click for spelling suggestions') : null,
+      sep(),
+      item('Cut', () => document.execCommand('cut'), { disabled: !has, key: 'Ctrl+X' }),
+      item('Copy', () => document.execCommand('copy'), { disabled: !has, key: 'Ctrl+C' }),
+      item('Paste', async () => {
+        const t = await navigator.clipboard.readText().catch(() => '');
+        if (t) { const s = this.selection(); this.replaceRange(s.start, s.end, t); }
+      }, { key: 'Ctrl+V' }),
+    );
+    menu.classList.remove('hidden');
+    const r = menu.getBoundingClientRect();
+    menu.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
+    menu.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+  },
+
+  // --------------------------------------------------------- find/replace --
+  initFind() {
+    const bar = $('#findBar'), fi = $('#findInput'), ri = $('#replaceInput');
+    const re = () => {
+      const q = fi.value;
+      if (!q) return null;
+      return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#findCase').checked ? 'g' : 'gi');
+    };
+    const count = () => {
+      const r = re();
+      $('#findCount').textContent = r ? `${(this.ta.value.match(r) || []).length} found` : '';
+    };
+    const go = (dir) => {
+      const r = re(); if (!r) return;
+      const t = this.ta.value;
+      const matches = [...t.matchAll(r)].map((m) => m.index);
+      if (!matches.length) return toast('Not found');
+      const pos = dir > 0 ? this.ta.selectionEnd : this.ta.selectionStart;
+      let idx = dir > 0 ? matches.find((i) => i >= pos) : [...matches].reverse().find((i) => i < pos);
+      if (idx === undefined) idx = dir > 0 ? matches[0] : matches[matches.length - 1];
+      this.reveal(idx, idx + fi.value.length, false);
+      fi.focus();
+    };
+    this.openFind = () => {
+      bar.classList.remove('hidden');
+      const s = this.selection();
+      if (s.text && s.text.length < 80 && !s.text.includes('\n')) fi.value = s.text;
+      fi.focus(); fi.select(); count();
+    };
+    fi.addEventListener('input', count);
+    $('#findCase').addEventListener('change', count);
+    fi.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(e.shiftKey ? -1 : 1); if (e.key === 'Escape') bar.classList.add('hidden'); });
+    $('#findNext').onclick = () => go(1);
+    $('#findPrev').onclick = () => go(-1);
+    $('#findClose').onclick = () => bar.classList.add('hidden');
+    $('#replaceOne').onclick = () => {
+      const s = this.selection(), r = re();
+      if (r && s.text && s.text.match(new RegExp(`^${r.source}$`, r.flags.replace('g', '')))) {
+        this.replaceRange(s.start, s.end, ri.value);
+      }
+      go(1); count();
+    };
+    $('#replaceAll').onclick = async () => {
+      const r = re(); if (!r) return;
+      const n = (this.ta.value.match(r) || []).length;
+      if (!n) return toast('Nothing to replace');
+      if (!(await confirmModal('Replace all', `Replace ${n} occurrence(s)? You can undo with Ctrl+Z.`, 'Replace all'))) return;
+      this.replaceAll(this.ta.value.replace(r, () => ri.value), (t) => t.replace(r, () => ri.value));
+      count();
+      toast(`Replaced ${n}`);
+    };
+  },
+};
+
+</script>
+  <script>/* js/pool.js */
+// =============================================================================
+// pool.js — the change pool
+// -----------------------------------------------------------------------------
+// Each pool item remembers:
+//   text     the exact passage you highlighted (kept current as you edit it)
+//   start/end its character position in the manuscript (auto-adjusted on every edit)
+//   note     what you want changed (optional)
+//   status   pending → negotiating → applied   (or dismissed / missing)
+//   history  every version this passage has had, so you can see what changed
+// =============================================================================
+
+// Shared by the pool and links: keep stored ranges glued to their words.
+function trackAnchors(getList, onChanged) {
+  Bus.on('textChange', ({ change, text }) => {
+    let touched = false;
+    for (const it of getList()) {
+      if (it.status === 'dismissed') continue;
+      const before = it.start + ':' + it.end;
+      const r = TextOps.shiftRange(it, change);
+      it.start = Math.max(0, r.start);
+      it.end = Math.min(text.length, Math.max(it.start, r.end));
+      if (before !== it.start + ':' + it.end) {
+        // If the edit landed inside the passage, refresh its stored text.
+        if (change.start < it.end && change.newEnd > it.start || (change.start >= it.start && change.start <= it.end)) {
+          it.text = text.slice(it.start, it.end);
+        }
+        touched = true;
+      }
+    }
+    if (touched) onChanged();
+  });
+  Bus.on('relocate', ({ text, transform }) => {
+    for (const it of getList()) {
+      let pos = TextOps.locate(text, it);
+      if (pos === null) {
+        const t2 = transform(it.text);
+        pos = TextOps.locate(text, { ...it, text: t2 });
+        if (pos !== null) it.text = t2;
+      }
+      if (pos === null) { if (it.status !== 'dismissed' && it.status !== 'applied') it.missing = true; }
+      else { it.start = pos; it.end = pos + it.text.length; it.missing = false; }
+    }
+    onChanged();
+  });
+}
+
+const Pool = {
+  init() {
+    trackAnchors(() => S.project.pool, debounce(() => this.render(), 400));
+    $('#poolFilter').addEventListener('change', () => this.render());
+    $('#btnNegotiateSel').addEventListener('click', () => {
+      const ids = $$('#poolList input[type=checkbox]:checked').map((c) => c.dataset.id);
+      if (!ids.length) return toast('Tick one or more items first');
+      this.negotiate(ids);
+    });
+  },
+
+  items() { return S.project.pool; },
+  get(id) { return S.project.pool.find((p) => p.id === id); },
+
+  async addFromSelection(withNote = false, negotiateNow = false) {
+    const s = Editor.selection();
+    if (!s.text.trim()) return toast('Highlight some text first');
+    let note = '';
+    if (withNote) {
+      note = await promptModal('What should change?', snippet(s.text, 220), '', true);
+      if (note === null) return;
+    }
+    const chapter = Editor.chapterAt(s.start);
+    const item = {
+      id: uid(),
+      text: s.text,
+      start: s.start,
+      end: s.end,
+      note,
+      status: 'pending',
+      chapter: chapter ? chapter.title : '',
+      created: Date.now(),
+      history: [],
+    };
+    S.project.pool.unshift(item);
+    markDirty(true);
+    this.render();
+    if (negotiateNow) this.negotiate([item.id]);
+    else toast('Added to change pool');
+  },
+
+  // Return the item's current position, re-finding it if needed.
+  resolve(item) {
+    const pos = TextOps.locate(Editor.text, item);
+    if (pos === null) { item.missing = true; return null; }
+    item.missing = false;
+    item.start = pos;
+    item.end = pos + item.text.length;
+    return pos;
+  },
+
+  goTo(item) {
+    if (this.resolve(item) === null) return toast("Can't find that passage any more — it may have been rewritten.", true);
+    Editor.reveal(item.start, item.end);
+  },
+
+  negotiate(ids) {
+    S.project.meta.negotiate = ids;
+    for (const id of ids) {
+      const it = this.get(id);
+      if (it && it.status === 'pending') it.status = 'negotiating';
+    }
+    markDirty(true);
+    this.render();
+    AI.showTab();
+    AI.renderContext();
+    const first = this.get(ids[0]);
+    const input = $('#chatInput');
+    if (first && first.note && !input.value) input.value = first.note;
+    input.focus();
+  },
+
+  // Called when you press "Apply" on an AI revision.
+  apply(id, newText) {
+    const item = this.get(id);
+    if (!item) return toast('That pool item no longer exists', true);
+    if (this.resolve(item) === null) return toast("Can't find the original passage — was it edited by hand? Use Copy instead.", true);
+    const old = item.text;
+    const start = item.start;
+    Editor.replaceRange(item.start, item.end, newText);
+    // replaceRange triggered anchor shifting; pin this item to its new text exactly.
+    item.history = item.history || [];
+    item.history.push({ text: old, at: Date.now() });
+    item.text = newText;
+    item.start = start;
+    item.end = start + newText.length;
+    item.status = 'applied';
+    item.missing = false;
+    markDirty(true);
+    this.render();
+    AI.renderContext();
+    Editor.reveal(item.start, item.end);
+    toast('Change applied — Ctrl+Z in the manuscript undoes it');
+  },
+
+  setStatus(item, st) {
+    item.status = st;
+    if (st !== 'negotiating') {
+      S.project.meta.negotiate = (S.project.meta.negotiate || []).filter((x) => x !== item.id);
+      AI.renderContext();
+    }
+    markDirty(true);
+    this.render();
+  },
+
+  async editNote(item) {
+    const n = await promptModal('Change note', snippet(item.text, 220), item.note || '', true);
+    if (n === null) return;
+    item.note = n;
+    markDirty(true);
+    this.render();
+  },
+
+  remove(item) {
+    S.project.pool = S.project.pool.filter((p) => p !== item);
+    S.project.meta.negotiate = (S.project.meta.negotiate || []).filter((x) => x !== item.id);
+    markDirty(true);
+    this.render();
+    AI.renderContext();
+  },
+
+  showHistory(item) {
+    const body = el('div', {},
+      ...(item.history || []).map((h, i) => el('div', { class: 'card' },
+        el('div', { class: 'tag' }, `Version ${i + 1} · ${new Date(h.at).toLocaleString()}`),
+        el('div', { style: 'font-family:var(--serif);white-space:pre-wrap;margin-top:4px' }, h.text))),
+      el('div', { class: 'card applied' }, el('div', { class: 'tag st-applied' }, 'Current'),
+        el('div', { style: 'font-family:var(--serif);white-space:pre-wrap;margin-top:4px' }, item.text)));
+    openModal({ title: 'Passage history', body, wide: true });
+  },
+
+  render() {
+    const filter = $('#poolFilter').value;
+    const list = $('#poolList');
+    const open = S.project.pool.filter((p) => p.status === 'pending' || p.status === 'negotiating');
+    $('#poolBadge').textContent = open.length;
+    const shown = S.project.pool.filter((p) =>
+      filter === 'all' ? true : filter === 'open' ? (p.status === 'pending' || p.status === 'negotiating') : p.status === filter);
+    list.innerHTML = '';
+    if (!shown.length) {
+      list.append(el('div', { class: 'empty' },
+        filter === 'open'
+          ? 'Highlight text in your manuscript, right-click, and choose "Add to change pool". Everything you want to rework collects here.'
+          : 'Nothing here.'));
+      return;
+    }
+    const negotiating = new Set(S.project.meta.negotiate || []);
+    for (const it of shown) {
+      const st = it.missing && it.status !== 'applied' ? 'missing' : it.status;
+      const card = el('div', { class: `card ${st}` },
+        el('div', { class: 'row' },
+          (it.status === 'pending' || it.status === 'negotiating')
+            ? el('input', { type: 'checkbox', 'data-id': it.id, checked: negotiating.has(it.id), title: 'Include in the next negotiation' })
+            : null,
+          el('span', { class: `tag st-${st}` }, st),
+          el('span', { class: 'spacer' }),
+          el('span', { class: 'tag', title: it.chapter }, snippet(it.chapter, 26))),
+        el('div', { class: 'snippet', title: 'Show in manuscript', onclick: () => this.goTo(it) }, it.text),
+        it.note ? el('div', { class: 'note' }, it.note) : null,
+        el('div', { class: 'actions' },
+          (it.status === 'pending' || it.status === 'negotiating')
+            ? el('button', { class: 'small accent', onclick: () => this.negotiate([it.id]) }, 'Negotiate')
+            : null,
+          el('button', { class: 'small', onclick: () => this.editNote(it) }, it.note ? 'Edit note' : 'Add note'),
+          it.history?.length ? el('button', { class: 'small', onclick: () => this.showHistory(it) }, `History (${it.history.length})`) : null,
+          it.status === 'applied' || it.status === 'dismissed'
+            ? el('button', { class: 'small', onclick: () => this.setStatus(it, 'pending') }, 'Reopen')
+            : el('button', { class: 'small ghost', onclick: () => this.setStatus(it, 'dismissed') }, 'Dismiss'),
+          el('button', { class: 'small ghost danger', title: 'Delete from pool', onclick: () => this.remove(it) }, '✕')));
+      list.append(card);
+    }
+  },
+};
+
+</script>
+  <script>/* js/memory.js */
+// =============================================================================
+// memory.js — story memory (the AI's reference shelf)
+// -----------------------------------------------------------------------------
+// Files you add are COPIED into <book>.crucible/memory/ so the memory travels
+// with the book. Each item has:
+//   includeInAI  text files: send the file's contents to the AI as background
+//   sendImage    pictures: attach the actual image (only works with vision models)
+//   notes/tags   your description — always sent, so the AI knows what a photo
+//                shows even when the image itself isn't attached
+// =============================================================================
+
+const Memory = {
+  cache: {}, // file -> text contents
+  dirs: {},
+
+  init() {
+    $('#btnAddMemory').addEventListener('click', () => this.add());
+    $('#btnNewNote').addEventListener('click', () => this.newNote());
+    $('#memSearch').addEventListener('input', debounce(() => this.render(), 150));
+  },
+
+  items() { return S.project.memory; },
+  images() { return S.project.memory.filter((m) => m.kind === 'image'); },
+
+  async requireSaved() {
+    if (S.path) return true;
+    const ok = await confirmModal('Save the book first',
+      'Story memory is stored in a folder next to your manuscript, so the book needs a file name first.', 'Save as…');
+    if (ok) await App.saveAs();
+    return !!S.path;
+  },
+
+  async add() {
+    if (!(await this.requireSaved())) return;
+    const items = await window.crucible.addMemory(S.path);
+    if (!items.length) return;
+    S.project.memory.push(...items);
+    markDirty(true);
+    await this.render();
+    toast(`Added ${items.length} item(s) to story memory`);
+  },
+
+  async newNote() {
+    if (!(await this.requireSaved())) return;
+    const name = await promptModal('New memory note', 'e.g. "Oakvale geography", "Character bible – Judy"');
+    if (!name) return;
+    const item = await window.crucible.newMemoryNote({ bookPath: S.path, name });
+    S.project.memory.push(item);
+    markDirty(true);
+    await this.render();
+    this.editText(item);
+  },
+
+  async pathOf(item) {
+    return window.crucible.memoryPath({ bookPath: S.path, file: item.file });
+  },
+
+  async textOf(item) {
+    if (this.cache[item.file] === undefined) {
+      this.cache[item.file] = await window.crucible.readMemoryText({ bookPath: S.path, file: item.file });
+    }
+    return this.cache[item.file];
+  },
+
+  async editText(item) {
+    const ta = el('textarea', { style: 'width:100%;height:58vh;font:14px/1.6 var(--serif)' });
+    ta.value = await this.textOf(item);
+    openModal({
+      title: `Edit ${item.name}`,
+      body: ta,
+      wide: true,
+      buttons: [
+        { label: 'Cancel' },
+        {
+          label: 'Save note', accent: true,
+          onClick: async () => {
+            await window.crucible.writeMemoryText({ bookPath: S.path, file: item.file, text: ta.value });
+            this.cache[item.file] = ta.value;
+            this.render();
+            toast('Memory note saved');
+          },
+        },
+      ],
+    });
+  },
+
+  async view(item) {
+    let src;
+    try { src = await mediaUrl(await this.pathOf(item)); } catch (e) { return toast(e.message, true); }
+    openModal({
+      cls: 'lightbox',
+      body: el('div', {}, el('img', { src }),
+        el('div', { class: 'cap' }, item.notes || item.name)),
+      buttons: [],
+    });
+  },
+
+  async remove(item) {
+    if (!(await confirmModal('Remove from memory', `Delete "${item.name}" from story memory? The copy inside the book folder will be removed (your original file is untouched).`, 'Remove'))) return;
+    await window.crucible.deleteMemory({ bookPath: S.path, file: item.file });
+    S.project.memory = S.project.memory.filter((m) => m !== item);
+    markDirty(true);
+    this.render();
+  },
+
+  // Assemble the memory text block sent to the AI, within a size budget.
+  async buildContext(budgetChars = 120000) {
+    let used = 0, truncated = false;
+    const parts = [];
+    for (const m of S.project.memory.filter((x) => x.kind === 'text' && x.includeInAI)) {
+      let t = await this.textOf(m);
+      const head = `### ${m.name}${m.tags ? ` [${m.tags}]` : ''}${m.notes ? `\n(${m.notes})` : ''}\n`;
+      if (used + t.length + head.length > budgetChars) {
+        t = t.slice(0, Math.max(0, budgetChars - used - head.length));
+        truncated = true;
+      }
+      parts.push(head + t);
+      used += head.length + t.length;
+      if (used >= budgetChars) break;
+    }
+    const imgs = this.images();
+    const imageLines = imgs.map((m) =>
+      `- ${m.name}${m.tags ? ` [${m.tags}]` : ''}: ${m.notes || '(no description)'}${m.sendImage ? ' — image attached' : ''}`);
+    return {
+      text: parts.join('\n\n'),
+      images: imageLines.join('\n'),
+      imageFiles: imgs.filter((m) => m.sendImage).map((m) => m.file),
+      truncated,
+    };
+  },
+
+  async render() {
+    const list = $('#memList');
+    const q = $('#memSearch').value.trim().toLowerCase();
+    $('#memBadge').textContent = S.project.memory.length;
+    list.innerHTML = '';
+    if (!S.project.memory.length) {
+      list.append(el('div', { class: 'empty' },
+        'Add photos, maps, character bibles, timelines, research notes — anything the AI should know about your story. ',
+        el('br'), el('br'),
+        'Text files (.md/.txt) are read in full. Photos get your written description, and can optionally be shown to vision-capable AIs.'));
+      return;
+    }
+    const shown = S.project.memory.filter((m) => !q || `${m.name} ${m.tags} ${m.notes}`.toLowerCase().includes(q));
+    for (const m of shown) {
+      const notes = el('textarea', { rows: 2, placeholder: m.kind === 'image' ? 'What does this picture show? (the AI reads this)' : 'Short description (optional)' });
+      notes.value = m.notes || '';
+      notes.addEventListener('change', () => { m.notes = notes.value; markDirty(true); });
+      const tags = el('input', { class: 'tags', placeholder: 'tags: character, place, 1952…', value: m.tags || '' });
+      tags.addEventListener('change', () => { m.tags = tags.value; markDirty(true); });
+
+      const card = el('div', { class: 'card' },
+        el('div', { class: 'row' },
+          el('span', { class: 'tag' }, m.kind === 'image' ? 'photo' : 'note'),
+          el('span', { class: 'name', title: m.name }, m.name)));
+
+      if (m.kind === 'image') {
+        const img = el('img', { class: 'mem-thumb', onclick: () => this.view(m) });
+        this.pathOf(m).then(mediaUrl).then((u) => (img.src = u)).catch(() => {});
+        card.append(img);
+      } else {
+        const preview = el('div', { class: 'snippet muted', onclick: () => this.editText(m) }, '…');
+        this.textOf(m).then((t) => (preview.textContent = snippet(t.replace(/^#.*$/m, ''), 200) || '(empty)'));
+        card.append(preview);
+      }
+      card.append(notes, tags);
+
+      const opt = m.kind === 'image'
+        ? el('label', { class: 'check', title: 'Attach this image when talking to vision-capable AIs' },
+          el('input', { type: 'checkbox', checked: m.sendImage, onchange: (e) => { m.sendImage = e.target.checked; markDirty(true); } }), 'Show image to AI')
+        : el('label', { class: 'check' },
+          el('input', { type: 'checkbox', checked: m.includeInAI, onchange: (e) => { m.includeInAI = e.target.checked; markDirty(true); } }), 'AI reads this');
+
+      card.append(el('div', { class: 'actions' }, opt, el('span', { class: 'spacer' }),
+        m.kind === 'text' ? el('button', { class: 'small', onclick: () => this.editText(m) }, 'Edit') : null,
+        el('button', { class: 'small ghost danger', onclick: () => this.remove(m) }, '✕')));
+      list.append(card);
+    }
+  },
+};
+
+</script>
+  <script>/* js/ai.js */
+// =============================================================================
+// ai.js — the AI desk (negotiation box)
+// -----------------------------------------------------------------------------
+// How a message is built:
+//   SYSTEM  = editing-partner instructions + story memory (+ whole book if ticked)
+//   USER    = your words + a fresh copy of every passage under negotiation,
+//             with ~1,000 characters of surrounding text so the AI sees context
+//
+// The AI is told to wrap proposed wording in <revision id="...">…</revision>.
+// Crucible turns each of those into a card with Apply / Diff / Copy buttons.
+// Nothing touches your manuscript until you press Apply.
+// =============================================================================
+
+const AI = {
+  busy: false,
+  CONTEXT_CHARS: 1000,
+
+  init() {
+    $('#btnSend').addEventListener('click', () => this.send());
+    $('#chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.send(); }
+    });
+    $('#btnNewChat').addEventListener('click', async () => {
+      if (S.project.chat.length && !(await confirmModal('New chat', 'Clear this conversation? (Applied changes stay in your manuscript.)', 'Clear'))) return;
+      S.project.chat = [];
+      markDirty(true);
+      this.renderChat();
+    });
+    $('#providerSelect').addEventListener('change', (e) => persistSettings({ activeProviderId: e.target.value }));
+    Bus.on('settings', () => this.renderProviders());
+  },
+
+  showTab() { App.showTab('right', 'ai'); },
+
+  renderProviders() {
+    const sel = $('#providerSelect');
+    sel.innerHTML = '';
+    const ps = S.settings.providers;
+    if (!ps.length) sel.append(el('option', { value: '' }, 'Add an AI in Settings ⚙'));
+    for (const p of ps) sel.append(el('option', { value: p.id }, `${p.name} · ${p.model || '?'}`));
+    sel.value = S.settings.activeProviderId || ps[0]?.id || '';
+  },
+
+  activeItems() {
+    return (S.project.meta.negotiate || []).map((id) => Pool.get(id)).filter(Boolean);
+  },
+
+  renderContext() {
+    const box = $('#aiContext');
+    const items = this.activeItems();
+    box.innerHTML = '';
+    if (!items.length) return;
+    box.append(el('div', { class: 'ctx-head' }, `On the table (${items.length})`, el('span', { class: 'spacer' }),
+      el('button', {
+        class: 'small ghost', onclick: () => { S.project.meta.negotiate = []; markDirty(true); this.renderContext(); Pool.render(); },
+      }, 'Clear')));
+    for (const it of items) {
+      box.append(el('div', { class: 'ctx-item' },
+        el('span', { class: 't', title: 'Show in manuscript', style: 'cursor:pointer', onclick: () => Pool.goTo(it) }, it.text),
+        el('button', {
+          title: 'Take off the table',
+          onclick: () => {
+            S.project.meta.negotiate = S.project.meta.negotiate.filter((x) => x !== it.id);
+            markDirty(true); this.renderContext(); Pool.render();
+          },
+        }, '✕')));
+    }
+  },
+
+  async buildSystem() {
+    const parts = [
+      `You are the editing partner for a novelist working on their manuscript in an app called Crucible.
+Your job is to negotiate revisions with the author: propose wording, explain your reasoning briefly, and adapt to their feedback. Preserve the author's voice, tense, point of view, and Markdown formatting unless asked otherwise. Stay consistent with the story memory below.
+
+HOW TO PROPOSE NEW WORDING
+- Put the complete replacement for a passage inside <revision id="ITEM_ID"> ... </revision>, using the id shown with that passage.
+- The text inside the tag must be a drop-in replacement for the ENTIRE passage: no quotation marks around it, no commentary inside it.
+- You may offer alternatives by writing several revision tags with the same id.
+- For wording that isn't tied to a passage on the table, use <revision id="new"> ... </revision>.
+- Keep discussion outside the tags short and useful. If the author is only asking a question, just answer it.`,
+    ];
+    if ($('#optMemory').checked) {
+      const mem = await Memory.buildContext();
+      if (mem.text) parts.push(`STORY MEMORY (reference material from the author)\n\n${mem.text}`);
+      if (mem.images) parts.push(`PICTURES IN STORY MEMORY\n${mem.images}`);
+      if (mem.truncated) toast('Story memory was too large and was trimmed for this message', true);
+      this._imageFiles = mem.imageFiles;
+    } else this._imageFiles = [];
+    if ($('#optFullBook').checked) {
+      parts.push(`FULL MANUSCRIPT\n\n${Editor.text}`);
+    } else {
+      const ol = Editor.outline.map((h) => `${'  '.repeat(h.level - 1)}- ${h.title} (${h.words} words)`).join('\n');
+      if (ol) parts.push(`MANUSCRIPT OUTLINE\n${ol}`);
+    }
+    return parts.join('\n\n---\n\n');
+  },
+
+  passagesBlock() {
+    const items = this.activeItems();
+    if (!items.length) return '';
+    const t = Editor.text;
+    const blocks = items.map((it) => {
+      Pool.resolve(it);
+      const before = t.slice(Math.max(0, it.start - this.CONTEXT_CHARS), it.start);
+      const after = t.slice(it.end, it.end + this.CONTEXT_CHARS);
+      return `<passage id="${it.id}"${it.chapter ? ` chapter="${it.chapter.replace(/"/g, "'")}"` : ''}>
+${it.note ? `Author's note: ${it.note}\n` : ''}<context_before>…${before}</context_before>
+<target>${it.text}</target>
+<context_after>${after}…</context_after>
+</passage>`;
+    });
+    return `\n\n[Passages on the table — rewrite only the <target> text]\n${blocks.join('\n\n')}`;
+  },
+
+  async send() {
+    if (this.busy) return;
+    const input = $('#chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    if (!S.settings.providers.length) {
+      toast('Add an AI provider in Settings first', true);
+      return Settings.open();
+    }
+    input.value = '';
+    S.project.chat.push({ role: 'user', content: text, items: [...(S.project.meta.negotiate || [])], at: Date.now() });
+    markDirty(true);
+    this.renderChat();
+    this.busy = true;
+    $('#btnSend').disabled = true;
+    const thinking = el('div', { class: 'msg assistant thinking' }, el('div', { class: 'who' }, 'AI'), el('div', { class: 'body' }, 'Thinking'));
+    $('#chatLog').append(thinking);
+    thinking.scrollIntoView({ block: 'end' });
+
+    try {
+      const system = await this.buildSystem();
+      // Send prior turns as-is; attach live passages to the newest message.
+      const history = S.project.chat
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .slice(-30)
+        .map((m) => ({ role: m.role, content: m.content }));
+      while (history.length && history[0].role !== 'user') history.shift(); // APIs require a user turn first
+      history[history.length - 1].content += this.passagesBlock();
+      const res = await window.crucible.aiChat({
+        providerId: $('#providerSelect').value || S.settings.activeProviderId,
+        system,
+        messages: history,
+        bookPath: S.path,
+        imageFiles: this._imageFiles,
+      });
+      if (res.ok) {
+        const prov = S.settings.providers.find((p) => p.id === $('#providerSelect').value);
+        S.project.chat.push({ role: 'assistant', content: res.text, at: Date.now(), by: prov ? prov.name : '', applied: [] });
+      } else {
+        S.project.chat.push({ role: 'error', content: res.error, at: Date.now() });
+      }
+    } catch (e) {
+      S.project.chat.push({ role: 'error', content: e.message, at: Date.now() });
+    } finally {
+      this.busy = false;
+      $('#btnSend').disabled = false;
+      markDirty(true);
+      this.renderChat();
+    }
+  },
+
+  // Split AI text into prose and <revision> blocks.
+  parse(text) {
+    const out = [];
+    const re = /<revision\s+id\s*=\s*["']?([\w-]+)["']?\s*>([\s\S]*?)<\/revision>/gi;
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) out.push({ type: 'prose', text: text.slice(last, m.index) });
+      out.push({ type: 'revision', id: m[1], text: m[2].replace(/^\n+|\n+$/g, '') });
+      last = re.lastIndex;
+    }
+    if (last < text.length) out.push({ type: 'prose', text: text.slice(last) });
+    return out;
+  },
+
+  renderChat() {
+    const log = $('#chatLog');
+    log.innerHTML = '';
+    if (!S.project.chat.length) {
+      log.append(el('div', { class: 'empty' },
+        'Put passages on the table from the Change pool (or right-click → "Negotiate this with AI now"), then tell the AI what you want: ',
+        el('br'), el('br'),
+        el('em', {}, '"Make this tenser — Wade shouldn\'t say outright that he knows."'),
+        el('br'), el('br'),
+        'Proposed rewrites show up as cards you can compare and apply.'));
+      return;
+    }
+    S.project.chat.forEach((m, mi) => {
+      if (m.role === 'user') {
+        log.append(el('div', { class: 'msg user' }, el('div', { class: 'who' }, 'You'), el('div', { class: 'body' }, m.content)));
+        return;
+      }
+      if (m.role === 'error') {
+        log.append(el('div', { class: 'msg error' }, el('div', { class: 'who' }, 'Error'), el('div', { class: 'body' }, m.content)));
+        return;
+      }
+      const body = el('div', { class: 'body' });
+      this.parse(m.content).forEach((part, pi) => {
+        if (part.type === 'prose') {
+          if (part.text.trim()) body.append(el('div', { html: sanitizeHtml(marked.parse(part.text)) }));
+        } else body.append(this.revisionCard(part, m, `${mi}:${pi}`));
+      });
+      log.append(el('div', { class: 'msg assistant' }, el('div', { class: 'who' }, m.by || 'AI'), body));
+    });
+    log.scrollTop = log.scrollHeight;
+  },
+
+  revisionCard(part, msg, key) {
+    const item = Pool.get(part.id);
+    const applied = (msg.applied || []).includes(key);
+    const card = el('div', { class: `revision ${applied ? 'applied' : ''}` });
+    const diffBox = el('div', { class: 'rv-diff hidden' });
+    const label = item ? `Rewrite · ${snippet(item.text, 40)}` : part.id === 'new' ? 'Suggested wording' : 'Rewrite (passage not in pool)';
+    card.append(
+      el('div', { class: 'rv-head' },
+        el('span', {}, applied ? '✓ Applied' : label),
+        el('span', { class: 'spacer' }),
+        item ? el('button', {
+          class: 'small', onclick: () => {
+            if (diffBox.classList.toggle('hidden')) return;
+            const html = diffWordsHtml(item.status === 'applied' && applied ? (item.history?.slice(-1)[0]?.text || item.text) : item.text, part.text);
+            diffBox.innerHTML = html ?? '<em>Too long to compare.</em>';
+          },
+        }, 'Diff') : null,
+        el('button', { class: 'small', onclick: () => { navigator.clipboard.writeText(part.text); toast('Copied'); } }, 'Copy'),
+        item && !applied ? el('button', {
+          class: 'small accent', onclick: () => {
+            Pool.apply(item.id, part.text);
+            msg.applied = [...(msg.applied || []), key];
+            this.renderChat();
+          },
+        }, 'Apply') : null),
+      el('div', { class: 'rv-body' }, part.text),
+      diffBox);
+    return card;
+  },
+};
+
+</script>
+  <script>/* js/links.js */
+// =============================================================================
+// links.js — songs and pictures linked to passages
+// -----------------------------------------------------------------------------
+// A link is just { kind, path, passage range } saved in project.json. The song
+// or picture is NOT copied into the book and never appears in the manuscript
+// or the PDF. If you move the file on disk, the link shows as missing and you
+// can re-point it.
+//
+// "Auto-play" mode: as your cursor moves into a passage that has a song linked,
+// Crucible starts that song — a soundtrack that follows you through the book.
+// =============================================================================
+
+const Links = {
+  init() {
+    trackAnchors(() => S.project.links, debounce(() => this.render(), 400));
+    Bus.on('caret', debounce((pos) => this.onCaret(pos), 250));
+    $('#ambientToggle').addEventListener('change', (e) => {
+      S.project.meta.ambient = e.target.checked;
+      markDirty(true);
+      if (e.target.checked) this.onCaret(Editor.ta.selectionStart);
+    });
+    $('#stLinked').addEventListener('click', () => {
+      const l = this._here;
+      if (l) this.open(l);
+    });
+  },
+
+  // Range to link: the selection, or the paragraph the cursor is in.
+  targetRange() {
+    const s = Editor.selection();
+    if (s.end > s.start) return s;
+    const p = TextOps.paragraphAt(Editor.text, s.start);
+    return { start: p.start, end: p.end, text: Editor.text.slice(p.start, p.end) };
+  },
+
+  async startLink(kind) {
+    const range = this.targetRange();
+    if (!range.text.trim()) return toast('Put the cursor in a paragraph or highlight text first');
+    const choose = (path, label) => {
+      const chapter = Editor.chapterAt(range.start);
+      S.project.links.push({
+        id: uid(), kind, path, label: label || baseName(path),
+        text: range.text, start: range.start, end: range.end,
+        chapter: chapter ? chapter.title : '', created: Date.now(),
+      });
+      markDirty(true);
+      this.render();
+      toast(kind === 'song' ? 'Song linked to passage' : 'Picture linked to passage');
+    };
+
+    const list = el('div', { class: 'pick-list' });
+    let modal;
+    if (kind === 'song') {
+      const songs = S.settings.playlist || [];
+      if (!songs.length) list.append(el('div', { class: 'muted' }, 'Your playlist is empty — browse for a file instead.'));
+      songs.forEach((s) => list.append(el('div', { class: 'mi', onclick: () => { choose(s.path, s.name); modal.close(); } }, '♪ ', s.name)));
+    } else {
+      const imgs = S.project.memory.filter((m) => m.kind === 'image');
+      if (!imgs.length) list.append(el('div', { class: 'muted' }, 'No pictures in story memory — browse for a file instead.'));
+      for (const m of imgs) {
+        const img = el('img');
+        Memory.pathOf(m).then(mediaUrl).then((u) => (img.src = u)).catch(() => {});
+        list.append(el('div', {
+          class: 'mi', onclick: async () => { choose(await Memory.pathOf(m), m.notes ? snippet(m.notes, 40) : m.name); modal.close(); },
+        }, img, m.name));
+      }
+    }
+    modal = openModal({
+      title: kind === 'song' ? 'Link a song to this passage' : 'Link a picture to this passage',
+      body: el('div', {}, el('p', { class: 'muted', style: 'font-family:var(--serif)' }, `“${snippet(range.text, 140)}”`), list),
+      buttons: [
+        { label: 'Cancel' },
+        {
+          label: 'Browse for a file…', accent: true,
+          onClick: async () => {
+            const f = asPick(kind === 'song' ? (await window.crucible.pickSongs())[0] : await window.crucible.pickImage());
+            if (f) choose(f.path, f.name);
+          },
+        },
+      ],
+    });
+  },
+
+  async open(link) {
+    if (!(await window.crucible.fileExists(link.path))) {
+      return toast(`File not found: ${link.label}`, true);
+    }
+    if (link.kind === 'song') return Player.playPath(link.path, link.label);
+    let src;
+    try { src = await mediaUrl(link.path); } catch (e) { return toast(e.message, true); }
+    openModal({
+      cls: 'lightbox',
+      body: el('div', {}, el('img', { src }), el('div', { class: 'cap' }, link.label)),
+      buttons: [],
+    });
+  },
+
+  goTo(link) {
+    const pos = TextOps.locate(Editor.text, link);
+    if (pos === null) return toast("Can't find the linked passage any more", true);
+    link.start = pos; link.end = pos + link.text.length;
+    Editor.reveal(link.start, link.end);
+  },
+
+  async repoint(link) {
+    const p = asPick(link.kind === 'song' ? (await window.crucible.pickSongs())[0] : await window.crucible.pickImage());
+    if (!p) return;
+    link.path = p.path;
+    link.label = p.name;
+    markDirty(true);
+    this.render();
+  },
+
+  remove(link) {
+    S.project.links = S.project.links.filter((l) => l !== link);
+    markDirty(true);
+    this.render();
+  },
+
+  at(pos, kind) {
+    return S.project.links.find((l) => (!kind || l.kind === kind) && pos >= l.start && pos <= l.end);
+  },
+
+  onCaret(pos) {
+    const here = this.at(pos);
+    this._here = here;
+    const chip = $('#stLinked');
+    if (here) {
+      chip.classList.remove('hidden');
+      chip.textContent = here.kind === 'song' ? `♪ ${here.label}` : `▣ ${here.label}`;
+      chip.title = here.kind === 'song' ? 'Click to play the linked song' : 'Click to view the linked picture';
+    } else chip.classList.add('hidden');
+
+    if (S.project.meta.ambient) {
+      const song = this.at(pos, 'song');
+      if (song && Player.currentPath !== song.path) Player.playPath(song.path, song.label);
+    }
+  },
+
+  async render() {
+    const list = $('#linkList');
+    $('#linkBadge').textContent = S.project.links.length;
+    $('#ambientToggle').checked = !!S.project.meta.ambient;
+    list.innerHTML = '';
+    if (!S.project.links.length) {
+      list.append(el('div', { class: 'empty' },
+        'Right-click in the manuscript → "Link a song" or "Link a picture" to tie music or images to a scene. ',
+        el('br'), el('br'), 'They are referenced, never embedded — they won\'t appear in the text or the PDF.'));
+      return;
+    }
+    const sorted = [...S.project.links].sort((a, b) => a.start - b.start);
+    for (const l of sorted) {
+      const exists = await window.crucible.fileExists(l.path);
+      list.append(el('div', { class: `card ${exists ? '' : 'missing'}` },
+        el('div', { class: 'row' },
+          el('span', { class: 'tag' }, l.kind === 'song' ? '♪ song' : '▣ picture'),
+          el('span', { class: 'name', title: window.crucible.platform === 'web' ? l.label : l.path }, l.label),
+          !exists ? el('span', { class: 'tag st-missing' }, 'file missing') : null),
+        el('div', { class: 'snippet', onclick: () => this.goTo(l), title: 'Show in manuscript' }, l.text),
+        el('div', { class: 'actions' },
+          el('button', { class: 'small accent', disabled: !exists, onclick: () => this.open(l) }, l.kind === 'song' ? 'Play' : 'View'),
+          el('button', { class: 'small', onclick: () => this.goTo(l) }, 'Go to'),
+          el('button', { class: 'small', onclick: () => this.repoint(l) }, 'Change file'),
+          window.crucible.platform === 'web' ? null : el('button', { class: 'small ghost', onclick: () => window.crucible.reveal(l.path) }, 'Show file'),
+          el('button', { class: 'small ghost danger', onclick: () => this.remove(l) }, '✕'))));
+    }
+  },
+};
+
+</script>
+  <script>/* js/player.js */
+// =============================================================================
+// player.js — built-in music player
+// -----------------------------------------------------------------------------
+// Plays files straight from where they live on your disk (MP3, M4A, OGG, WAV,
+// FLAC, AAC). The playlist is a list of file paths saved in Crucible's global
+// settings, so it's there no matter which book you open.
+// =============================================================================
+
+const Player = {
+  audio: null,
+  index: -1,
+  currentPath: null,
+  shuffle: false,
+  repeat: false,
+  seeking: false,
+
+  init() {
+    const a = (this.audio = $('#audio'));
+    a.volume = S.settings.volume ?? 0.7;
+    $('#plVol').value = a.volume;
+
+    $('#plPlay').onclick = () => this.toggle();
+    $('#plNext').onclick = () => this.next();
+    $('#plPrev').onclick = () => (a.currentTime > 3 ? (a.currentTime = 0) : this.prev());
+    $('#plShuffle').onclick = (e) => { this.shuffle = !this.shuffle; e.currentTarget.classList.toggle('on', this.shuffle); };
+    $('#plRepeat').onclick = (e) => { this.repeat = !this.repeat; e.currentTarget.classList.toggle('on', this.repeat); };
+    $('#plVol').oninput = (e) => { a.volume = +e.target.value; };
+    $('#plVol').onchange = (e) => persistSettings({ volume: +e.target.value });
+    $('#plListBtn').onclick = () => { $('#playlistPanel').classList.toggle('hidden'); this.render(); };
+    $('#plAddFiles').onclick = async () => this.addPaths(await window.crucible.pickSongs());
+    $('#plAddFolder').onclick = async () => this.addPaths(await window.crucible.pickMusicFolder());
+    $('#plClear').onclick = async () => {
+      if (await confirmModal('Clear playlist', 'Remove every song from the playlist? (Files on disk are untouched.)', 'Clear')) {
+        await persistSettings({ playlist: [] });
+        this.render();
+      }
+    };
+
+    const seek = $('#plSeek');
+    seek.addEventListener('input', () => { this.seeking = true; $('#plCur').textContent = fmtTime((seek.value / 1000) * a.duration); });
+    seek.addEventListener('change', () => { a.currentTime = (seek.value / 1000) * a.duration; this.seeking = false; });
+    a.addEventListener('timeupdate', () => {
+      if (!this.seeking && a.duration) seek.value = (a.currentTime / a.duration) * 1000;
+      if (!this.seeking) $('#plCur').textContent = fmtTime(a.currentTime);
+    });
+    a.addEventListener('loadedmetadata', () => ($('#plDur').textContent = fmtTime(a.duration)));
+    a.addEventListener('play', () => ($('#plPlay').textContent = '❚❚'));
+    a.addEventListener('pause', () => ($('#plPlay').textContent = '▶'));
+    a.addEventListener('ended', () => (this.repeat ? (a.currentTime = 0, a.play()) : this.next()));
+    a.addEventListener('error', () => { if (a.getAttribute('src')) toast(`Can't play ${$('#plTitle').textContent} — file missing or unsupported`, true); });
+
+    // Space bar = play/pause when you're not typing somewhere.
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault(); this.toggle();
+      }
+    });
+  },
+
+  list() { return S.settings.playlist || []; },
+
+  async addPaths(paths) {
+    if (!paths.length) return;
+    const existing = new Set(this.list().map((s) => s.path));
+    const added = paths.map(asPick).filter((p) => !existing.has(p.path))
+      .map((p) => ({ path: p.path, name: p.name.replace(/\.(mp3|m4a|ogg|wav|flac|aac)$/i, '') }));
+    await persistSettings({ playlist: [...this.list(), ...added] });
+    this.render();
+    toast(`Added ${added.length} song(s)`);
+  },
+
+  load(i) {
+    const s = this.list()[i];
+    if (!s) return;
+    this.index = i;
+    this.playPath(s.path, s.name);
+  },
+
+  async playPath(p, name) {
+    this.currentPath = p;
+    const i = this.list().findIndex((s) => s.path === p);
+    if (i !== -1) this.index = i;
+    $('#plTitle').textContent = name || baseName(p);
+    this.render();
+    try {
+      this.audio.src = await mediaUrl(p);
+    } catch (e) {
+      return toast(`Can't play ${name || 'that song'}: ${e.message}`, true, 5000);
+    }
+    this.audio.play().catch(() => {});
+  },
+
+  toggle() {
+    if (!this.audio.src) { if (this.list().length) this.load(0); return; }
+    this.audio.paused ? this.audio.play() : this.audio.pause();
+  },
+
+  next() {
+    const n = this.list().length;
+    if (!n) return;
+    const i = this.shuffle ? Math.floor(Math.random() * n) : (this.index + 1) % n;
+    this.load(i);
+  },
+
+  prev() {
+    const n = this.list().length;
+    if (!n) return;
+    this.load((this.index - 1 + n) % n);
+  },
+
+  async removeAt(i) {
+    const pl = [...this.list()];
+    pl.splice(i, 1);
+    await persistSettings({ playlist: pl });
+    this.render();
+  },
+
+  async move(i, d) {
+    const pl = [...this.list()];
+    const j = i + d;
+    if (j < 0 || j >= pl.length) return;
+    [pl[i], pl[j]] = [pl[j], pl[i]];
+    await persistSettings({ playlist: pl });
+    this.render();
+  },
+
+  render() {
+    const box = $('#playlist');
+    if ($('#playlistPanel').classList.contains('hidden')) return;
+    box.innerHTML = '';
+    if (!this.list().length) {
+      box.append(el('div', { class: 'empty' }, window.crucible.platform === 'web' && window.crucible.storageMode === 'browser' ? 'Add songs to play. In this browser they can only be remembered for the current session.' : 'Add songs or a whole music folder. They play from where they are — nothing is copied.'));
+      return;
+    }
+    this.list().forEach((s, i) => box.append(el('div', {
+      class: `pl-item ${s.path === this.currentPath ? 'cur' : ''}`, title: window.crucible.platform === 'web' ? s.name : s.path, ondblclick: () => this.load(i),
+    },
+    el('span', { class: 'nm', onclick: () => this.load(i) }, s.name),
+    el('button', { class: 'ghost', title: 'Move up', onclick: () => this.move(i, -1) }, '↑'),
+    el('button', { class: 'ghost', title: 'Move down', onclick: () => this.move(i, 1) }, '↓'),
+    el('button', { class: 'ghost danger', title: 'Remove', onclick: () => this.removeAt(i) }, '✕'))));
+  },
+};
+
+</script>
+  <script>/* js/export.js */
+// =============================================================================
+// export.js — book → PDF
+// -----------------------------------------------------------------------------
+// Builds a print-styled HTML version of the manuscript (book typography:
+// justified text, first-line indents, chapters on new pages, scene breaks as
+// centered asterisks) and hands it to Chromium's print-to-PDF in main.js.
+// Linked songs/pictures and the change pool are never included.
+// <!-- HTML comments --> in your Markdown can be left out, so you can keep
+// private notes in the manuscript.
+// =============================================================================
+
+const Export = {
+  FONTS: {
+    garamond: '"EB Garamond", Garamond, "Adobe Garamond Pro", "Times New Roman", serif',
+    palatino: '"Palatino Linotype", Palatino, "Book Antiqua", serif',
+    georgia: 'Georgia, serif',
+    times: '"Times New Roman", Times, serif',
+    baskerville: 'Baskerville, "Baskerville Old Face", "Libre Baskerville", Georgia, serif',
+  },
+
+  defaults() {
+    const firstH1 = Editor.outline.find((h) => h.level === 1);
+    return {
+      title: S.path ? baseName(S.path).replace(/\.[^.]+$/, '') : (firstH1 ? firstH1.title : 'Untitled'),
+      author: '',
+      pageSize: 'trade6x9',
+      marginIn: 0.75,
+      fontSize: 11.5,
+      font: 'garamond',
+      // One "# Title" with "## Chapter" headings under it → chapters are ##.
+      breakLevel: Editor.outline.filter((h) => h.level === 1).length > 1 ? '1' : '2',
+      titlePage: true,
+      pageNumbers: true,
+      stripComments: true,
+      indent: true,
+    };
+  },
+
+  open() {
+    const o = Object.assign(this.defaults(), S.project.meta.export || {});
+    const f = (label, input, hint) => el('div', { class: 'field' }, el('label', {}, label), input, hint ? el('div', { class: 'hint' }, hint) : null);
+    const sel = (val, opts) => { const s = el('select'); opts.forEach(([v, t]) => s.append(el('option', { value: v }, t))); s.value = val; return s; };
+    const chk = (v) => el('input', { type: 'checkbox', checked: v });
+
+    const ui = {
+      title: el('input', { value: o.title }),
+      author: el('input', { value: o.author, placeholder: 'Your name' }),
+      pageSize: sel(o.pageSize, [['trade6x9', 'Trade paperback 6 × 9 in'], ['digest55x85', 'Digest 5.5 × 8.5 in'], ['letter', 'US Letter 8.5 × 11 in'], ['a5', 'A5'], ['a4', 'A4']]),
+      marginIn: el('input', { type: 'number', step: '0.05', min: '0.3', max: '2', value: o.marginIn }),
+      font: sel(o.font, [['garamond', 'Garamond'], ['palatino', 'Palatino'], ['baskerville', 'Baskerville'], ['georgia', 'Georgia'], ['times', 'Times New Roman']]),
+      fontSize: el('input', { type: 'number', step: '0.5', min: '8', max: '18', value: o.fontSize }),
+      breakLevel: sel(o.breakLevel, [['1', 'Each # heading (chapters are #)'], ['2', 'Each ## heading (chapters are ##)'], ['0', 'Never']]),
+      titlePage: chk(o.titlePage),
+      pageNumbers: chk(o.pageNumbers),
+      indent: chk(o.indent),
+      stripComments: chk(o.stripComments),
+    };
+
+    openModal({
+      title: 'Export book as PDF',
+      body: el('div', {},
+        f('Title', ui.title),
+        f('Author', ui.author),
+        f('Page size', ui.pageSize),
+        f('Margins (inches)', ui.marginIn),
+        f('Typeface', ui.font, 'Uses fonts installed on this computer.'),
+        f('Font size (pt)', ui.fontSize),
+        f('New page for', ui.breakLevel),
+        f('Title page', ui.titlePage),
+        f('Page numbers', ui.pageNumbers),
+        f('Book-style indents', ui.indent, 'Indent paragraphs instead of spacing them (like a printed novel).'),
+        f('Leave out comments', ui.stripComments, 'Skips <!-- notes --> you\'ve hidden in the manuscript.'),
+        window.crucible.cssPaging ? el('p', { class: 'muted', style: 'font-size:12px;margin-top:14px' },
+          'Your browser\'s print window will open. Choose "Save as PDF" as the destination, leave Margins on Default, and turn off "Headers and footers" if it shows.') : null),
+      buttons: [
+        { label: 'Cancel' },
+        {
+          label: 'Export…', accent: true,
+          onClick: async () => {
+            const opts = {
+              title: ui.title.value, author: ui.author.value, pageSize: ui.pageSize.value,
+              marginIn: +ui.marginIn.value, font: ui.font.value, fontSize: +ui.fontSize.value,
+              breakLevel: ui.breakLevel.value, titlePage: ui.titlePage.checked, pageNumbers: ui.pageNumbers.checked,
+              indent: ui.indent.checked, stripComments: ui.stripComments.checked,
+            };
+            S.project.meta.export = opts;
+            markDirty(true);
+            const web = !!window.crucible.cssPaging;
+            toast(web ? 'Opening the print window…' : 'Building PDF…', false, 8000);
+            const res = await window.crucible.exportPdf({
+              html: this.buildHtml(Editor.text, { ...opts, cssPaging: web }),
+              options: opts,
+              suggestedName: `${opts.title || 'book'}.pdf`,
+            });
+            if (res?.printed) {
+              toast('In the print window, choose "Save as PDF" as the printer.', false, 7000);
+            } else if (res?.ok) {
+              toast('PDF saved');
+              window.crucible.reveal(res.path);
+            } else if (!res?.canceled) toast('Export failed', true);
+          },
+        },
+      ],
+    });
+  },
+
+  buildHtml(md, o) {
+    if (o.stripComments) md = md.replace(/<!--[\s\S]*?-->/g, '');
+    const body = sanitizeHtml(marked.parse(md));
+    const breaks = o.breakLevel === '0' ? '' : o.breakLevel === '2' ? 'h1, h2' : 'h1';
+    const titlePage = o.titlePage
+      ? `<section class="title-page"><div class="t">${escapeHtml(o.title)}</div>${o.author ? `<div class="a">${escapeHtml(o.author)}</div>` : ''}</section>`
+      : '';
+    // Browser printing: page size, margins and page numbers come from CSS @page.
+    const sizes = { letter: 'letter', a4: 'A4', a5: 'A5', trade6x9: '6in 9in', digest55x85: '5.5in 8.5in' };
+    const paging = o.cssPaging ? `
+  @page { size: ${sizes[o.pageSize] || 'letter'}; margin: ${Number(o.marginIn) || 0.75}in;
+    ${o.pageNumbers ? '@bottom-center { content: counter(page); font-family: Georgia, serif; font-size: 9pt; color: #444; }' : ''} }
+  ${o.titlePage && o.pageNumbers ? '@page :first { @bottom-center { content: none; } }' : ''}` : '';
+    return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(o.title)}</title>
+<style>${paging}
+  html { -webkit-print-color-adjust: exact; }
+  body { font-family: ${this.FONTS[o.font] || this.FONTS.garamond}; font-size: ${o.fontSize}pt; line-height: 1.45;
+         color: #111; margin: 0; text-align: justify; hyphens: auto; -webkit-hyphens: auto; orphans: 2; widows: 2; }
+  .title-page { height: ${o.cssPaging ? '90vh' : '85vh'}; display: flex; flex-direction: column; justify-content: center; text-align: center; break-after: page; }
+  .title-page .t { font-size: 2.4em; letter-spacing: .04em; margin-bottom: .8em; }
+  .title-page .a { font-size: 1.2em; font-style: italic; }
+  h1, h2, h3 { text-align: center; font-weight: normal; break-after: avoid; hyphens: none; }
+  h1 { font-size: 1.7em; margin: 2.5em 0 1.6em; letter-spacing: .03em; }
+  h2 { font-size: 1.3em; margin: 2em 0 1em; }
+  h3 { font-size: 1.1em; margin: 1.5em 0 .8em; font-style: italic; }
+  ${breaks ? `${breaks} { break-before: page; } body > ${breaks.split(',')[0].trim()}:first-child { break-before: auto; }` : ''}
+  .title-page + h1, .title-page + h2, h1 + h2 { break-before: auto; }
+  p { margin: 0 0 ${o.indent ? '0' : '.8em'}; }
+  ${o.indent ? 'p + p { text-indent: 1.5em; }' : ''}
+  hr { border: 0; text-align: center; margin: 1.2em 0; break-after: avoid; }
+  hr::after { content: "*  *  *"; letter-spacing: .4em; }
+  blockquote { margin: 1em 2em; font-style: italic; }
+  img { max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  pre, code { font-family: Consolas, "Courier New", monospace; font-size: .85em; white-space: pre-wrap; text-align: left; }
+</style></head><body>${titlePage}${body}</body></html>`;
+  },
+};
+
+</script>
+  <script>/* js/settings.js */
+// =============================================================================
+// settings.js — AI providers & preferences
+// -----------------------------------------------------------------------------
+// Store as many AIs as you like and switch from the "AI" dropdown in the top
+// bar. Three connection types cover almost everything:
+//   Anthropic          Claude models
+//   OpenAI-compatible  OpenAI, and anything that speaks the same API:
+//                      Ollama / LM Studio (local, free), OpenRouter, Groq,
+//                      Mistral, DeepSeek, xAI, Together…
+//   Google Gemini      Gemini models
+// API keys are encrypted with your operating system's keychain and never
+// shown again after you save them.
+// =============================================================================
+
+const Settings = {
+  PRESETS: [
+    { name: 'Claude', type: 'anthropic', baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-5-5', needsKey: true },
+    { name: 'OpenAI', type: 'openai', baseUrl: 'https://api.openai.com/v1', model: '', needsKey: true },
+    { name: 'Google Gemini', type: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: '', needsKey: true },
+    { name: 'Ollama (local)', type: 'openai', baseUrl: 'http://localhost:11434/v1', model: '', needsKey: false },
+    { name: 'LM Studio (local)', type: 'openai', baseUrl: 'http://localhost:1234/v1', model: '', needsKey: false },
+    { name: 'OpenRouter', type: 'openai', baseUrl: 'https://openrouter.ai/api/v1', model: '', needsKey: true },
+    { name: 'Groq', type: 'openai', baseUrl: 'https://api.groq.com/openai/v1', model: '', needsKey: true },
+    { name: 'Custom (OpenAI-compatible)', type: 'openai', baseUrl: '', model: '', needsKey: true },
+  ],
+
+  open() {
+    // Work on a copy; nothing is saved until you press Save.
+    const draft = S.settings.providers.map((p) => ({ ...p }));
+    let activeId = S.settings.activeProviderId || draft[0]?.id || null;
+    const ui = { ...S.settings.ui };
+    const listBox = el('div');
+
+    const renderList = () => {
+      listBox.innerHTML = '';
+      if (!draft.length) listBox.append(el('div', { class: 'empty' }, 'No AIs yet. Add one below.'));
+      draft.forEach((p, i) => {
+        const field = (label, input, hint) => el('div', { class: 'field' }, el('label', {}, label), input, hint ? el('div', { class: 'hint' }, hint) : null);
+        const inp = (key, attrs = {}) => {
+          const n = el('input', { value: p[key] ?? '', ...attrs });
+          n.addEventListener('input', () => (p[key] = n.value));
+          return n;
+        };
+        const type = el('select');
+        [['anthropic', 'Anthropic (Claude)'], ['openai', 'OpenAI-compatible'], ['gemini', 'Google Gemini']]
+          .forEach(([v, t]) => type.append(el('option', { value: v }, t)));
+        type.value = p.type;
+        type.onchange = () => (p.type = type.value);
+        const key = el('input', { type: 'password', placeholder: p.hasKey ? '•••••••• stored — type to replace' : 'Paste API key (leave blank for local servers)' });
+        key.addEventListener('input', () => (p.newApiKey = key.value));
+        const status = el('span', { class: 'muted' });
+
+        listBox.append(el('div', { class: `prov-card ${p.id === activeId ? 'active' : ''}` },
+          el('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:4px' },
+            el('label', { class: 'check' }, el('input', {
+              type: 'radio', name: 'activeProv', checked: p.id === activeId,
+              onchange: () => { activeId = p.id; renderList(); },
+            }), 'Default'),
+            el('strong', { style: 'flex:1' }, p.name || 'Unnamed'),
+            status,
+            el('button', {
+              class: 'small', onclick: async () => {
+                status.textContent = 'saving & testing…';
+                await save();
+                const r = await window.crucible.aiChat({
+                  providerId: p.id, system: 'You are a connection test.',
+                  messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
+                });
+                status.textContent = r.ok ? `✓ ${snippet(r.text, 30)}` : `✕ ${snippet(r.error, 70)}`;
+                status.style.color = r.ok ? 'var(--ok)' : 'var(--bad)';
+              },
+            }, 'Test'),
+            el('button', { class: 'small ghost danger', onclick: () => { draft.splice(i, 1); if (activeId === p.id) activeId = draft[0]?.id || null; renderList(); } }, 'Remove')),
+          field('Name', inp('name')),
+          field('Connection type', type),
+          field('Base URL', inp('baseUrl', { placeholder: 'https://…' })),
+          field('Model', inp('model', { placeholder: p.type === 'anthropic' ? 'claude-sonnet-5-5' : 'model name from your provider' }),
+            'The exact model ID from your provider\'s docs (for Ollama, run "ollama list").'),
+          field('API key', key),
+          field('Max reply tokens', inp('maxTokens', { type: 'number', placeholder: '4096' })),
+          field('Temperature', inp('temperature', { type: 'number', step: '0.1', placeholder: 'provider default' })),
+          field('Timeout (seconds)', inp('timeoutSec', { type: 'number', placeholder: '180' }), 'Raise this for slow local models.')));
+      });
+    };
+
+    const presetSel = el('select');
+    presetSel.append(el('option', { value: '' }, '+ Add an AI…'));
+    this.PRESETS.forEach((p, i) => presetSel.append(el('option', { value: i }, p.name)));
+    presetSel.onchange = () => {
+      const pr = this.PRESETS[presetSel.value];
+      presetSel.value = '';
+      if (!pr) return;
+      const p = { id: uid(), name: pr.name, type: pr.type, baseUrl: pr.baseUrl, model: pr.model, maxTokens: 4096, temperature: '', timeoutSec: pr.needsKey ? 180 : 600 };
+      draft.push(p);
+      if (!activeId) activeId = p.id;
+      renderList();
+    };
+
+    const fontSize = el('input', { type: 'number', min: '12', max: '28', value: ui.fontSize });
+    fontSize.oninput = () => { ui.fontSize = +fontSize.value; document.documentElement.style.setProperty('--editor-size', ui.fontSize + 'px'); };
+
+    const save = async () => {
+      await persistSettings({ providers: draft, activeProviderId: activeId, ui });
+      // Re-sync the draft with what was stored (keys become "stored" flags).
+      S.settings.providers.forEach((sp) => { const d = draft.find((x) => x.id === sp.id); if (d) { d.hasKey = sp.hasKey; delete d.newApiKey; } });
+    };
+
+    openModal({
+      title: 'Settings',
+      wide: true,
+      body: el('div', {},
+        el('h3', { style: 'margin:4px 0 8px;font-family:var(--serif);font-weight:500' }, 'AI providers'),
+        el('p', { class: 'muted', style: 'margin-top:0' }, 'Add as many as you like and switch between them from the AI dropdown in the top bar.'),
+        listBox,
+        presetSel,
+        el('h3', { style: 'margin:22px 0 8px;font-family:var(--serif);font-weight:500' }, 'Writing'),
+        el('div', { class: 'field' }, el('label', {}, 'Editor text size (px)'), fontSize)),
+      buttons: [{ label: 'Cancel', onClick: () => App.applyUi() }, { label: 'Save', accent: true, onClick: save }],
+    });
+    renderList();
+  },
+};
+
+</script>
+  <script>/* js/app.js */
+// =============================================================================
+// app.js — startup, file commands, tabs, keyboard shortcuts
+// =============================================================================
+
+const App = {
+  async init() {
+    S.settings = await window.crucible.getSettings();
+    S.project = blankProject();
+    this.applyUi();
+
+    Editor.init();
+    Pool.init();
+    Memory.init();
+    AI.init();
+    Links.init();
+    Player.init();
+
+    AI.renderProviders();
+    Editor.setView(S.settings.ui.view || 'edit');
+    this.renderAll();
+    this.bindTopbar();
+    this.bindTabs();
+    this.bindShortcuts();
+
+    // Autosave every 2 minutes when the book has a file name.
+    setInterval(() => { if (S.dirty && S.path) this.save(true); }, 120000);
+    window.crucible.onSaveAndQuit(async () => {
+      if (await this.save()) window.crucible.quitNow();
+    });
+
+    updateTitle();
+    if (window.crucible.platform === 'web') {
+      // Browsers only let a page touch your files after a click, so instead of
+      // reopening silently we offer a one-click "welcome back".
+      $('#btnDownload').classList.remove('hidden');
+      this.welcome();
+    } else if (S.settings.recent?.[0] && (await window.crucible.fileExists(S.settings.recent[0]))) {
+      // Reopen the last book.
+      this.openPath(S.settings.recent[0]).catch(() => {});
+    }
+  },
+
+  async welcome() {
+    const recent = [];
+    for (const r of (S.settings.recent || []).slice(0, 6)) if (await window.crucible.fileExists(r)) recent.push(r);
+    const body = el('div', {});
+    let modal;
+    if (recent.length) {
+      body.append(el('p', { class: 'muted', style: 'margin-top:0' }, 'Pick up where you left off:'));
+      const list = el('div', { class: 'pick-list' });
+      recent.forEach((r) => list.append(el('div', {
+        class: 'mi', onclick: () => { modal.close(); this.openPath(r).catch((e) => toast(e.message, true, 6000)); },
+      }, el('strong', {}, baseName(r)), el('span', { class: 'muted', style: 'margin-left:auto;font-size:12px' }, r.split('/')[0]))));
+      body.append(list);
+      if (window.crucible.storageMode === 'folder') {
+        body.append(el('p', { class: 'muted', style: 'font-size:12px' }, 'Your browser will ask once per session to allow access to the book\'s folder.'));
+      }
+    } else {
+      body.append(
+        el('p', { style: 'margin-top:0' }, 'Crucible keeps your book as a normal Markdown file on your computer.'),
+        window.crucible.storageMode === 'folder'
+          ? el('p', {}, 'Click ', el('strong', {}, 'Open book'), ' and choose the ', el('em', {}, 'folder'),
+            ' that contains your manuscript. Crucible keeps its notes, memory and backups in a ', el('code', {}, 'YourBook.crucible'), ' folder next to it.')
+          : el('p', {}, 'This browser can\'t edit files in place, so your book will be kept in the browser\'s own storage. Use ',
+            el('strong', {}, 'Download .md'), ' to save a copy to your computer, and don\'t clear this browser\'s site data. Edge or Chrome can edit the file directly.'));
+    }
+    modal = openModal({
+      title: recent.length ? 'Welcome back' : 'Welcome to Crucible',
+      body,
+      buttons: [
+        { label: 'Start a new book', onClick: () => this.newBook() },
+        { label: 'Open book…', accent: true, onClick: () => this.open() },
+      ],
+    });
+  },
+
+  download() {
+    const name = S.path ? baseName(S.path) : 'Untitled.md';
+    window.crucible.downloadText(name, Editor.text);
+    toast(`Downloading ${name}`);
+  },
+
+  applyUi() {
+    const ui = S.settings.ui;
+    document.documentElement.dataset.theme = ui.theme || 'dark';
+    $('#btnTheme').textContent = ui.theme === 'light' ? 'Dark' : 'Light';
+    document.documentElement.style.setProperty('--editor-size', (ui.fontSize || 17) + 'px');
+  },
+
+  renderAll() {
+    Pool.render();
+    Memory.render();
+    Links.render();
+    AI.renderContext();
+    AI.renderChat();
+  },
+
+  // -------------------------------------------------------------- files --
+  async confirmDiscard() {
+    if (!S.dirty) return true;
+    return confirmModal('Unsaved changes', 'Discard unsaved changes to the current manuscript?', 'Discard');
+  },
+
+  loadBook(res) {
+    S.path = res.path;
+    S.sidecar = res.sidecar;
+    S.project = Object.assign(blankProject(), res.project);
+    S.project.meta = Object.assign({ negotiate: [] }, S.project.meta);
+    Memory.cache = {};
+    Editor.setText(res.text);
+    // Offsets saved last time should match, but re-find anything that drifted
+    // (e.g. if the .md was edited in another program).
+    Bus.emit('relocate', { text: res.text, transform: (t) => t });
+    S.lastSaved = null;
+    markDirty(false);
+    updateTitle();
+    this.renderAll();
+  },
+
+  async open() {
+    if (!(await this.confirmDiscard())) return;
+    const res = await window.crucible.openBook();
+    if (res) { this.loadBook(res); toast(`Opened ${baseName(res.path)}`); }
+  },
+
+  async openPath(p) {
+    const res = await window.crucible.openBookPath(p);
+    this.loadBook(res);
+    toast(`Opened ${baseName(res.path)}`);
+  },
+
+  async newBook() {
+    if (!(await this.confirmDiscard())) return;
+    S.path = null;
+    S.sidecar = null;
+    S.project = blankProject();
+    Editor.setText('# Title\n\n## Chapter One\n\n');
+    markDirty(false);
+    this.renderAll();
+    updateTitle();
+  },
+
+  async save(quiet = false) {
+    if (!S.path) return this.saveAs();
+    try {
+      const r = await window.crucible.saveBook({ bookPath: S.path, text: Editor.text, project: S.project });
+      S.lastSaved = r.savedAt;
+      markDirty(false);
+      updateTitle();
+      if (!quiet) toast('Saved');
+      return true;
+    } catch (e) {
+      toast(`Save failed: ${e.message}`, true, 6000);
+      return false;
+    }
+  },
+
+  async saveAs() {
+    const r = await window.crucible.saveBookAs({ text: Editor.text, project: S.project, currentPath: S.path });
+    if (!r) return false;
+    S.path = r.path;
+    S.sidecar = r.sidecar;
+    S.lastSaved = r.savedAt;
+    Memory.cache = {};
+    markDirty(false);
+    updateTitle();
+    this.renderAll();
+    toast(`Saved as ${baseName(r.path)}`);
+    return true;
+  },
+
+  async backups() {
+    if (!S.path) return toast('Save the book first — backups are made on every save.');
+    const names = await window.crucible.listBackups(S.path);
+    if (!names.length) return toast('No backups yet. One is made each time you save.');
+    const pre = el('pre', {}, 'Select a backup to preview it.');
+    let chosen = null;
+    const list = el('div', { class: 'list pick-list', style: 'padding:0' });
+    names.forEach((n) => {
+      const m = n.match(/_(\d{4}-\d\d-\d\d)T(\d\d)-(\d\d)-(\d\d)/);
+      const label = m ? `${m[1]}  ${m[2]}:${m[3]}:${m[4]} UTC` : n;
+      list.append(el('div', {
+        class: 'mi', onclick: async (e) => {
+          $$('.mi', list).forEach((x) => (x.style.borderColor = ''));
+          e.currentTarget.style.borderColor = 'var(--ember)';
+          chosen = await window.crucible.readBackup({ bookPath: S.path, name: n });
+          pre.textContent = `${countWords(chosen).toLocaleString()} words\n\n${chosen.slice(0, 20000)}${chosen.length > 20000 ? '\n\n…' : ''}`;
+        },
+      }, label));
+    });
+    openModal({
+      title: 'Restore from backup',
+      wide: true,
+      body: el('div', { class: 'backup-view' }, list, pre),
+      buttons: [
+        { label: 'Close' },
+        {
+          label: 'Restore into editor', accent: true,
+          onClick: () => {
+            if (!chosen) { toast('Pick a backup first'); return false; }
+            Editor.replaceAll(chosen);
+            toast('Backup restored — Ctrl+Z undoes, Save keeps it');
+          },
+        },
+      ],
+    });
+  },
+
+  async showRecent() {
+    const dd = $('#btnRecent').parentElement;
+    const menu = $('#recentMenu');
+    menu.innerHTML = '';
+    const rec = S.settings.recent || [];
+    if (!rec.length) menu.append(el('div', { class: 'mi muted' }, 'No recent books'));
+    rec.forEach((p) => menu.append(el('div', {
+      class: 'mi', title: p, onclick: async () => {
+        dd.classList.remove('open');
+        if (!(await this.confirmDiscard())) return;
+        this.openPath(p).catch((e) => toast(`Couldn't open: ${e.message}`, true));
+      },
+    }, baseName(p), el('span', { class: 'muted', style: 'margin-left:8px;font-size:11px' }, p))));
+    dd.classList.toggle('open');
+  },
+
+  // ----------------------------------------------------------- UI wiring --
+  bindTopbar() {
+    $('#btnNew').onclick = () => this.newBook();
+    $('#btnOpen').onclick = () => this.open();
+    $('#btnSave').onclick = () => this.save();
+    $('#btnSaveAs').onclick = () => this.saveAs();
+    $('#btnBackups').onclick = () => this.backups();
+    $('#btnDownload').onclick = () => this.download();
+    $('#btnRecent').onclick = (e) => { e.stopPropagation(); this.showRecent(); };
+    document.addEventListener('click', (e) => { if (!e.target.closest('.dropdown')) $$('.dropdown').forEach((d) => d.classList.remove('open')); });
+    $('#btnFind').onclick = () => Editor.openFind();
+    $('#btnExport').onclick = () => Export.open();
+    $('#btnSettings').onclick = () => Settings.open();
+    $('#btnTheme').onclick = () => {
+      const t = S.settings.ui.theme === 'light' ? 'dark' : 'light';
+      persistSettings({ ui: { ...S.settings.ui, theme: t } }).then(() => this.applyUi());
+    };
+  },
+
+  bindTabs() {
+    $$('.tabs').forEach((nav) => nav.querySelectorAll('button').forEach((b) =>
+      b.addEventListener('click', () => this.showTab(nav.dataset.for, b.dataset.tab))));
+  },
+
+  showTab(side, tab) {
+    const panel = $(`#${side}`);
+    panel.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+    panel.querySelectorAll('.tab').forEach((s) => s.classList.toggle('on', s.dataset.tab === tab));
+  },
+
+  bindShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 's' && e.shiftKey) { e.preventDefault(); this.saveAs(); }
+      else if (k === 's') { e.preventDefault(); this.save(); }
+      else if (k === 'o') { e.preventDefault(); this.open(); }
+      else if (k === 'f' || k === 'h') { e.preventDefault(); Editor.openFind(); }
+      else if (k === 'e' && e.shiftKey) { e.preventDefault(); Export.open(); }
+    });
+  },
+};
+
+window.addEventListener('DOMContentLoaded', () => App.init().catch((e) => {
+  console.error(e);
+  toast(`Startup error: ${e.message}`, true, 10000);
+}));
+
+</script>
+</body>
+</html>

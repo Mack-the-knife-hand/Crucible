@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tmp-*
+
+# Personal workspace files and local development artifacts
+crucible-settings.json
+*.crucible/
+.env
+.env.*
+!.env.example
+.runtime-*/
+node_modules/
+Books/
+Music/
+*.log
