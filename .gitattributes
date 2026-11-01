@@ -1,0 +1,6 @@
+# Preserve distributed assets and audited vendor libraries byte for byte.
+*.pdf binary
+*.png binary
+*.ico binary
+*.icns binary
+src/vendor/* -text
