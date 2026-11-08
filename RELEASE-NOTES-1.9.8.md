@@ -13,6 +13,6 @@ The browser HTML and portable Windows ZIP are rebuilt from this repository. The 
 
 Back up your writing before updating. Replace application files only; keep your manuscripts, companion folders, media, and settings.
 
-The illustrated PDF instructions currently describe version 1.9.3. The release notes above describe the added features.
+The updated [18-page PDF work instructions](docs/Crucible-1.9.8-Work-Instructions.pdf) cover both editions and the added 1.9.8 features.
 
 Validation: unit checks and save/navigation regressions pass. Browser verification uses local simulated AI responses; paid provider calls were not exercised.

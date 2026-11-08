@@ -13,7 +13,7 @@ Crucible is a free, portable writing workspace with optional AI assistance. Writ
 3. Choose your Crucible working folder and grant the browser permission to save there.
 4. Create a practice book, save it, and reopen it before using your main manuscript.
 
-**[Read the illustrated PDF instructions](docs/Crucible-1.9.3-Work-Instructions.pdf)** - covers version 1.9.3; newer controls are described below.
+**[Read the illustrated PDF instructions](docs/Crucible-1.9.8-Work-Instructions.pdf)** - 18 pages covering browser and Windows setup, writing, AI tools, pictures, audio, exports, backups, and the new 1.9.8 controls.
 
 For the complete source, choose **Code > Download ZIP**. Extract it before opening `crucible.html`. The [latest release](https://github.com/Mack-the-knife-hand/Crucible/releases/latest) includes the portable Windows application. Extract the whole Windows ZIP before running `Crucible.exe`. GitHub's file view does not run the editor: download the HTML first.
 
@@ -40,7 +40,7 @@ Version 1.9.8 adds portable linked pictures, writing-area background images, col
 
 The refinement protects edits made while saving, prevents overlapping writes, adds persistent save-error feedback and Retry save, and checks unsaved work before switching books. It also explains AI context and fixes Windows line-ending handling in browser script-security hashes.
 
-See [refinement notes](REFINEMENT-NOTES.md) for changes, validation and limits. Unit tests, focused save/navigation regressions and a browser smoke check passed during refinement. Full desktop/export/restore acceptance testing and live paid-AI calls remain outstanding. Test copies of important work and inspect exports.
+See [refinement notes](REFINEMENT-NOTES.md) for changes, validation and limits. Unit tests, focused save/navigation regressions, and all 206 browser checks passed for 1.9.8, including browser exports and restoration. Full desktop acceptance testing and live paid-AI calls remain outstanding. Test copies of important work and inspect exports.
 
 ## Develop from source
 
