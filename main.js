@@ -460,19 +460,23 @@ async function callAI({ providerId, system, messages, bookPath, imageFiles }) {
         });
       } else msgs.push({ role: m.role, content: m.content });
     });
-    const body = { model: p.model, messages: msgs, max_tokens: maxTokens };
-    if (temperature !== undefined) body.temperature = temperature;
+    let body = SettingsCore.openAIChatBody(p.baseUrl, { model: p.model, messages: msgs, maxTokens, temperature });
     const headers = { 'content-type': 'application/json' };
     if (key) headers.authorization = `Bearer ${key}`;
-    const r = await aiFetch(`${trimBase(p.baseUrl) || 'https://api.openai.com/v1'}/chat/completions`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers,
-      body: JSON.stringify(body),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error?.message || j.message || `HTTP ${r.status}`);
-    return j.choices?.[0]?.message?.content || '';
+    for (let attempt = 0; ; attempt++) {
+      const r = await aiFetch(`${trimBase(p.baseUrl) || 'https://api.openai.com/v1'}/chat/completions`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers,
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) return j.choices?.[0]?.message?.content || '';
+      const msg = j.error?.message || j.message || `HTTP ${r.status}`;
+      const fixed = r.status === 400 && attempt < 2 ? SettingsCore.fixOpenAIBody(msg, body) : null;
+      if (!fixed) throw new Error(msg);
+      body = fixed; // the server told us which parameter name it wants: retry
+    }
   } catch (e) {
     if (e.name === 'AbortError') throw new Error(`The AI didn't answer within ${timeoutMs / 1000}s.`);
     if (e.cause?.code === 'ECONNREFUSED') throw new Error(`Couldn't reach ${p.baseUrl || 'the provider'} — is the server running?`);
@@ -768,11 +772,11 @@ function registerIpc() {
     });
     if (res.canceled || !res.filePath) return null;
     await trustBook(res.filePath);
-    // Carry memory files across when saving to a new location.
+    // Carry story memory and linked pictures across to the new location.
     if (currentPath && currentPath !== res.filePath && (await isTrustedBook(currentPath))) {
-      const from = path.join(sidecarDir(currentPath), 'memory');
-      if (fs.existsSync(from)) {
-        await fsp.cp(from, path.join(sidecarDir(res.filePath), 'memory'), { recursive: true }).catch(() => {});
+      for (const sub of ['memory', 'linked']) {
+        const from = path.join(sidecarDir(currentPath), sub);
+        if (fs.existsSync(from)) await fsp.cp(from, path.join(sidecarDir(res.filePath), sub), { recursive: true }).catch(() => {});
       }
       // …and chapter images, if the new file is in a different folder.
       const imgs = path.join(path.dirname(currentPath), 'images');
@@ -812,6 +816,63 @@ function registerIpc() {
     await fsp.copyFile(src, path.join(dir, name));
     return { rel: `images/${name}`, name: path.basename(src) };
   });
+  // Pictures linked to passages are copied into "<Book>.crucible/linked/" so
+  // they travel with the book (any computer, any drive letter). They're not
+  // part of the manuscript and never go into exports. from: a picture you
+  // linked earlier by its path (copied in once); otherwise a file dialog.
+  handle('book:linkPicture', async (_e, { bookPath, from } = {}) => {
+    bookPath = await checkBook(bookPath);
+    let src = from;
+    if (!src) {
+      const res = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose a picture to link', properties: ['openFile'],
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
+      });
+      if (res.canceled) return null;
+      src = res.filePaths[0];
+    }
+    if (typeof src !== 'string' || !path.isAbsolute(src) || isNetPath(src) || !MIME[path.extname(src).toLowerCase()]) return null;
+    const st = await fsp.stat(src).catch(() => null);
+    if (!st || !st.isFile() || st.size > 100 * 1024 * 1024) return null;
+    const bytes = await fsp.readFile(src);
+    if (!isImageBytes(bytes)) return null;
+    const dir = await ensureDir(path.join(sidecarDir(bookPath), 'linked'));
+    const safe = path.basename(src).replace(/[^\w.\- ]+/g, '_').slice(-80);
+    const stored = `${uid()}_${safe}`;
+    await fsp.writeFile(path.join(dir, stored), bytes);
+    return { ref: `bk:linked/${stored}`, name: path.basename(src) };
+  });
+
+  // Writing-area background photo: one copy kept in Crucible's own folder
+  // (userData/backgrounds), referenced as "bg:<file>".
+  const bgDir = () => path.join(app.getPath('userData'), 'backgrounds');
+  handle('settings:chooseBackground', async () => {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose a background photo for the writing area', properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] }],
+    });
+    if (res.canceled) return null;
+    const src = res.filePaths[0];
+    if (!MIME[path.extname(src).toLowerCase()] || isNetPath(src)) return null;
+    const st = await fsp.stat(src).catch(() => null);
+    if (!st || st.size > 20 * 1024 * 1024) throw new Error('That picture is too large (20 MB at most).');
+    const bytes = await fsp.readFile(src);
+    if (!isImageBytes(bytes)) throw new Error("That file isn't a picture Crucible can show.");
+    const dir = await ensureDir(bgDir());
+    const stored = `${uid()}${path.extname(src).toLowerCase()}`;
+    await fsp.writeFile(path.join(dir, stored), bytes);
+    // Only the newest is kept.
+    for (const f of await fsp.readdir(dir).catch(() => [])) if (f !== stored) await fsp.unlink(path.join(dir, f)).catch(() => {});
+    return { ref: `bg:${stored}`, name: path.basename(src) };
+  });
+  handle('settings:backgroundUrl', async (_e, ref) => {
+    if (typeof ref !== 'string' || !ref.startsWith('bg:')) return null;
+    const p = path.join(bgDir(), path.basename(ref.slice(3)));
+    const ext = path.extname(p).toLowerCase();
+    const bytes = await fsp.readFile(p).catch(() => null);
+    return bytes && MIME[ext] && isImageBytes(bytes) ? `data:${MIME[ext]};base64,${bytes.toString('base64')}` : null;
+  });
+
   handle('book:readImage', async (_e, { bookPath, rel }) => {
     // Only real pictures inside the book's own folder (links followed, then
     // checked again), never other files and never another computer.

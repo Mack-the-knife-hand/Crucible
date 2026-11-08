@@ -73,6 +73,11 @@ const ai = http.createServer((req, res) => {
   req.on('data', (c) => (body += c));
   req.on('end', () => {
     lastReq = { auth: req.headers.authorization, body: JSON.parse(body) };
+    // "/strict/…" behaves like OpenAI's newer models: max_tokens is refused.
+    if (req.url.startsWith('/strict/') && 'max_tokens' in lastReq.body) {
+      res.writeHead(400, { 'content-type': 'application/json', ...cors });
+      return res.end(JSON.stringify({ error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", type: 'invalid_request_error', param: 'max_tokens', code: 'unsupported_parameter' } }));
+    }
     const last = lastReq.body.messages.at(-1);
     const text = typeof last.content === 'string' ? last.content : last.content.find((c) => c.type === 'text').text;
     let reply;
@@ -355,7 +360,20 @@ async function seed(page) {
     await page.click('.modal footer button.accent');
     await wait(300);
     const links = await js(() => S.project.links.map((l) => l.path));
-    check('Linked picture from the drive stored as a portable path', links.includes('home:picks/test.png'), links.join(', '));
+    const picRef = links.find((p) => p.startsWith('bk:linked/'));
+    const picFile = picRef && await js(async (name) => {
+      const d = await (await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('Drive')).getDirectoryHandle('Books')).getDirectoryHandle('Oakvale')).getDirectoryHandle('Oakvale Test.crucible');
+      return (await (await (await d.getDirectoryHandle('linked')).getFileHandle(name)).getFile()).size;
+    }, picRef.slice('bk:linked/'.length));
+    check('Linked picture is copied into the book (travels to any computer)', !!picRef && picFile === fs.statSync(path.join(FIX, 'test.png')).size, links.join(', '));
+    // A link made by an older version (a spot on this computer) is adopted.
+    const adopted = await js(async () => {
+      S.project.links.push({ id: 'old1', kind: 'image', path: 'home:picks/test.png', label: 'old', text: 'Judy brought', start: 0, end: 5, created: 0 });
+      Links._adopting = null;
+      await Links.adoptPictures();
+      return S.project.links.find((l) => l.id === 'old1').path;
+    });
+    check('Pictures linked by older versions are copied in automatically', adopted.startsWith('bk:linked/'), adopted);
   }
   await page.keyboard.press('Control+s');
   await wait(600);
@@ -439,6 +457,16 @@ async function seed(page) {
   await p2.click('.modal .pick-list .mi');
   await wait(500);
   check('Book, pool and AI chat come along', await p2.evaluate(() => Editor.text.includes('Faulkner') && S.project.pool.length === 3 && S.project.chat.length === 4));
+  if (FIX) {
+    // The book's linked pictures work on this "other computer" with nothing re-attached.
+    const pic2 = await p2.evaluate(async () => {
+      const pics = S.project.links.filter((l) => l.kind === 'image');
+      const ok = await Promise.all(pics.map((l) => Links.exists(l)));
+      const url = pics[0] ? await mediaUrl(pics[0].path).catch(() => '') : '';
+      return { n: pics.length, ok, img: url.startsWith('data:image/png') };
+    });
+    check('Other computer: linked pictures open without re-attaching', pic2.n >= 1 && pic2.ok.every(Boolean) && pic2.img, JSON.stringify(pic2));
+  }
   check('Memory limit default carried in settings file', (await p2.evaluate(() => S.settings.memoryLimit)) === 120000);
   if (FIX) {
     await p2.evaluate(() => Links.open(S.project.links.find((l) => l.kind === 'song')));
@@ -499,7 +527,7 @@ async function seed(page) {
   await p2.evaluate(() => Editor.replaceRange(0, 0, 'AUTOSAVED LINE\n\n'));
   await wait(900);
   check('Changes are saved automatically', (await p2.evaluate(READ, ['Drive', 'Books', 'Oakvale', 'Oakvale Test.md'])).startsWith('AUTOSAVED LINE'));
-  check('Status bar says autosaved', (await p2.textContent('#stDirty')).startsWith('autosaved'));
+  check('Status bar says autosaved', (await p2.textContent('#stDirty')).toLowerCase().startsWith('autosaved'));
   await p2.screenshot({ path: path.join(OUT, 'w9-autosave.png'), clip: { x: 0, y: 0, width: 1366, height: 60 } });
   await p2.click('#autosaveToggle');
   await p2.evaluate(() => Editor.replaceRange(0, 0, 'NOT AUTOSAVED\n\n'));
@@ -788,6 +816,15 @@ async function seed(page) {
   check('Security: export language can\'t inject XML; network paths refused', sec.badLang && sec.netPath);
   check('Security: a giant heading line can\'t freeze the editor', sec.longLine < 1000, `${sec.longLine} ms`);
 
+  const strict = await p2.evaluate(async () => {
+    const s = await window.crucible.getSettings();
+    const base = s.providers[0].baseUrl.replace(/\/v1$/, '');
+    await window.crucible.saveSettings({ providers: [...s.providers, { id: 'strict', name: 'Strict', type: 'openai', baseUrl: `${base}/strict/v1`, model: 'gpt-6.1-sol', maxTokens: 777 }] });
+    const r = await window.crucible.aiChat({ providerId: 'strict', system: 'You are a connection test.', messages: [{ role: 'user', content: 'Reply with the single word: ready' }] });
+    await window.crucible.saveSettings({ providers: s.providers.map(({ hasKey, ...p }) => p) });
+    return r;
+  });
+  check('OpenAI models that refuse max_tokens work (switches to max_completion_tokens)', strict.ok && lastReq.body.max_completion_tokens === 777 && !('max_tokens' in lastReq.body), JSON.stringify(strict).slice(0, 160));
   check('Contents: [TOC] line places it; book title left out', tocT.marker && tocT.titleSkipped && tocT.chItems === 2, JSON.stringify(tocT));
   check('Contents: scenes option lists scenes; "none" removes it and the marker', tocT.scItems === 2 && tocT.none, JSON.stringify(tocT));
   check('Contents: without a marker it goes just before the first chapter', tocT.auto, JSON.stringify(tocT));
@@ -1008,6 +1045,105 @@ print(json.dumps({'bad': z.testzip(), 'names': z.namelist(), 'key': s['providers
   check('Reply shown in the AI desk under the persona', await p2.evaluate(() => [...document.querySelectorAll('.msg.assistant .who')].some((w) => w.textContent.startsWith('Literary agent'))));
   check("Chapter text isn't stored in the chat history", !(await p2.evaluate(() => JSON.stringify(S.project.chat))).includes('Mara had grey eyes'));
   await p2.screenshot({ path: path.join(OUT, 'w23-beta.png') });
+  // Several chapters in a row
+  lastReq = null;
+  await p2.click('#btnBeta');
+  await wait(150);
+  await p2.selectOption('.modal select >> nth=1', 'chapters');
+  const chList = await p2.evaluate(() => Beta.chapters().map((c) => c.title));
+  await p2.selectOption('.modal .beta-range select >> nth=0', '0');
+  await p2.selectOption('.modal .beta-range select >> nth=1', String(Math.min(2, chList.length - 1)));
+  const rangeInfo = await p2.textContent('.modal .beta-range .hint');
+  await p2.screenshot({ path: path.join(OUT, 'w26-beta-chapters.png') });
+  await p2.click('.modal footer button.accent');
+  for (let i = 0; i < 40 && (await p2.evaluate(() => AI.busy)); i++) await wait(100);
+  await wait(150);
+  const sentAll = JSON.stringify(lastReq?.body.messages.at(-1) || '');
+  const sentTxt = sentAll.slice(sentAll.indexOf('<passage>')); // the book text itself
+  const want = chList.slice(0, Math.min(3, chList.length));
+  check('Beta reader: several chapters in a row are all sent, in order', chList.length >= 2 && want.every((t) => sentTxt.includes(t)) && want.every((t, i) => i === 0 || sentTxt.indexOf(t) > sentTxt.indexOf(want[i - 1])), `${rangeInfo} | ${want.join(' → ')}`);
+  check('Beta reader: multi-chapter read asks about flow between chapters', (lastReq?.body.messages[0].content || '').includes('several chapters in a row') && /chapters 1–\d/.test(await p2.evaluate(() => S.project.chat.at(-2)?.content || '')));
+
+  // ===================================================== OUTLINE FOLDING ====
+  await p2.evaluate(() => App.showTab('left', 'outline'));
+  const fold0 = await p2.evaluate(() => ({ n: $$('#outline .ol-item').length, togs: $$('#outline .ol-tog:not(.none)').length }));
+  const firstTog = await p2.evaluate(() => { const t = [...$$('#outline .ol-item')].find((n) => n.querySelector('.ol-tog:not(.none)')); return { title: t.textContent, offset: +t.dataset.offset }; });
+  await p2.click('#outline .ol-tog:not(.none) >> nth=0');
+  await wait(100);
+  await p2.screenshot({ path: path.join(OUT, 'w27-outline-folded.png') });
+  const fold1 = await p2.evaluate((off) => ({ n: $$('#outline .ol-item').length, folded: !!$(`#outline .ol-item[data-offset="${off}"].folded`), saved: (S.project.meta.outlineFolded || []).length, wc: +$(`#outline .ol-item[data-offset="${off}"] .wc`).textContent.replace(/,/g, '') }), firstTog.offset);
+  await p2.evaluate(() => Editor.renderOutline()); // folds survive a refresh
+  const fold2 = await p2.evaluate(() => $$('#outline .ol-item').length);
+  await p2.click('#outline .ol-item.folded .ol-tog');
+  await wait(100);
+  const fold3 = await p2.evaluate(() => ({ n: $$('#outline .ol-item').length, saved: (S.project.meta.outlineFolded || []).length }));
+  check('Outline: ▾ folds the headings under a chapter (count shows the whole chapter)', fold0.togs >= 1 && fold1.folded && fold1.n < fold0.n && fold1.saved === 1 && fold1.wc > 0, JSON.stringify({ fold0, fold1 }));
+  check('Outline: folds stay folded on refresh, and ▸ unfolds', fold2 === fold1.n && fold3.n === fold0.n && fold3.saved === 0, JSON.stringify({ fold2, fold3 }));
+
+  // ================================================= COLOURED PASSAGES ====
+  const hl = await p2.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const saved = { links: S.project.links, notes: S.project.notes };
+    const t = Editor.text;
+    const a = t.indexOf('Judy brought'), b = t.indexOf('Mara had grey eyes');
+    S.project.links = [{ id: 'h1', kind: 'image', path: 'x', label: 'P', start: a, end: a + 12, text: t.slice(a, a + 12) },
+      { id: 'h2', kind: 'song', path: 'y', label: 'S', start: b, end: b + 8, text: t.slice(b, b + 8) }];
+    S.project.notes = [{ id: 'h3', start: a + 6, end: a + 20, text: t.slice(a + 6, a + 20), note: 'n', resolved: false },
+      { id: 'h4', start: b + 9, end: b + 13, text: 'grey', note: 'n', resolved: true }];
+    Highlights.render();
+    const marks = () => $$('#hlBackdrop mark').map((m) => [m.className, m.textContent]);
+    const first = marks();
+    // Typing before them keeps the colours on the same words.
+    Editor.ta.focus(); Editor.ta.setSelectionRange(0, 0);
+    document.execCommand('insertText', false, 'NEW TEXT ');
+    await wait(400);
+    const after = marks();
+    const aligned = $('#hlBackdrop .hl-inner').textContent.replace(/\u200b$/, '') === Editor.text;
+    // Switched off in Settings → no colours.
+    S.settings.ui.highlightLinked = false; Highlights.render();
+    const off = $('#hlBackdrop').classList.contains('hidden');
+    S.settings.ui.highlightLinked = true;
+    document.execCommand('undo');
+    S.project.links = saved.links; S.project.notes = saved.notes;
+    Highlights.render();
+    return { first, after, aligned, off };
+  });
+  const cls = (k) => hl.first.filter(([c]) => c.includes(k)).map(([, x]) => x).join('|');
+  check('Coloured passages: picture purple, note orange, song green', cls('hl-img') === 'Judy b|rought' && cls('hl-note').startsWith('rought') && cls('hl-song') === 'Mara had' && hl.first.some(([c]) => c.includes('hl-2')), JSON.stringify(hl.first));
+  check('Coloured passages: resolved notes aren\'t coloured; colours follow edits', !hl.first.some(([, x]) => x === 'grey') && JSON.stringify(hl.after) === JSON.stringify(hl.first) && hl.aligned, JSON.stringify(hl.after));
+  check('Coloured passages: can be switched off in Settings', hl.off);
+
+  // ================================================= WRITING BACKGROUND ====
+  if (FIX) {
+    await p2.evaluate(() => Settings.open());
+    await wait(200);
+    await p2.click('.modal button:has-text("Choose photo…")');
+    await wait(400);
+    await p2.evaluate(() => { const r = $('.modal input[type=range]'); r.value = '40'; r.dispatchEvent(new Event('input')); });
+    await wait(200);
+    const bgLive = await p2.evaluate(() => ({ has: $('#editorWrap').classList.contains('has-bg'), veil: getComputedStyle(document.documentElement).getPropertyValue('--bg-veil').trim(), bg: getComputedStyle($('#editorPane')).backgroundImage.includes('url('), ta: getComputedStyle($('#editor')).backgroundColor }));
+    await p2.click('.modal footer button.accent'); // Save
+    await wait(300);
+    await p2.screenshot({ path: path.join(OUT, 'w28-background.png') });
+    const bgSaved = await p2.evaluate(async () => ({ ref: S.settings.ui.bgImage, op: S.settings.ui.bgOpacity, file: JSON.parse(await (await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('Drive')).getFileHandle('crucible-settings.json')).getFile()).text()).ui.bgImage }));
+    check('Background photo: chosen, shown behind the typing area at the set opacity', bgLive.has && bgLive.veil === '60%' && bgLive.bg && bgLive.ta === 'rgba(0, 0, 0, 0)', JSON.stringify(bgLive));
+    check('Background photo: kept in the Crucible folder and saved in settings (travels with the drive)', bgSaved.ref.startsWith('home:') && bgSaved.op === 40 && bgSaved.file === bgSaved.ref, JSON.stringify(bgSaved));
+    // Remove it again (and Escape-closing without Save never keeps a preview)
+    await p2.evaluate(() => Settings.open());
+    await wait(200);
+    await p2.click('.modal .bg-remove');
+    await wait(100);
+    const offLive = await p2.evaluate(() => $('#editorWrap').classList.contains('has-bg'));
+    await p2.keyboard.press('Escape');
+    await wait(200);
+    const afterEsc = await p2.evaluate(() => $('#editorWrap').classList.contains('has-bg'));
+    await p2.evaluate(() => Settings.open());
+    await wait(200);
+    await p2.click('.modal .bg-remove');
+    await p2.click('.modal footer button.accent');
+    await wait(200);
+    check('Background photo: Remove works; closing without Save keeps the old setting', !offLive && afterEsc && !(await p2.evaluate(() => $('#editorWrap').classList.contains('has-bg'))) && (await p2.evaluate(() => S.settings.ui.bgImage)) === '');
+  }
 
   // ===================================================== DATA IMPORT ====
   section('Import data into story memory');

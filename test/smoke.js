@@ -51,11 +51,16 @@ const server = http.createServer((req, res) => {
   // Anything a hostile manuscript tries to fetch lands here (and is counted).
   // A server that redirects AI requests to another address.
   if (req.url.startsWith('/redirect/')) { res.writeHead(307, { location: `http://127.0.0.1:${server.address().port}/stolen` }); res.end(); return; }
-  if (!req.url.startsWith('/v1/')) { beacons.push(req.url); res.writeHead(200, { 'content-type': 'image/png' }); res.end(); return; }
+  if (!req.url.startsWith('/v1/') && !req.url.startsWith('/strict/')) { beacons.push(req.url); res.writeHead(200, { 'content-type': 'image/png' }); res.end(); return; }
   let body = '';
   req.on('data', (c) => (body += c));
   req.on('end', () => {
     lastRequest = { url: req.url, auth: req.headers.authorization, body: JSON.parse(body || '{}') };
+    // "/strict/…" behaves like OpenAI's newer models: max_tokens is refused.
+    if (req.url.startsWith('/strict/') && 'max_tokens' in lastRequest.body) {
+      res.writeHead(400, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", type: 'invalid_request_error', param: 'max_tokens', code: 'unsupported_parameter' } }));
+    }
     const userMsg = lastRequest.body.messages.at(-1);
     const text = typeof userMsg.content === 'string' ? userMsg.content : userMsg.content.find((c) => c.type === 'text').text;
     const id = (text.match(/<passage id="([\w-]+)"/) || [])[1] || 'new';
@@ -94,6 +99,7 @@ dialog.showSaveDialog = async (_w, o = {}) => {
   return { canceled: false, filePath: pdfOut };
 };
 dialog.showOpenDialog = async (_w, opts) => {
+  if (/background photo/i.test(opts.title)) return { canceled: false, filePaths: [path.join(FIX || TMP, 'test.png')] };
   if (/songs/i.test(opts.title)) return { canceled: false, filePaths: [path.join(FIX || TMP, 'test.mp3')] };
   if (/Choose a Crucible backup/i.test(opts.title)) return { canceled: false, filePaths: [path.join(OUT, 'desktop-backup.zip')] };
   if (/Where should the backup be restored/i.test(opts.title)) return { canceled: false, filePaths: [RESTORE_DIR] };
@@ -338,6 +344,30 @@ print(json.dumps({'bad': z.testzip(), 'names': z.namelist(), 'key': s['providers
   const pdfOk = fs.existsSync(pdfOut) && fs.statSync(pdfOut).size > 5000;
   check('PDF exported', pdfOk, pdfOk ? `${fs.statSync(pdfOut).size} bytes` : '');
 
+  const strictR = await js(`window.crucible.getSettings().then(async (s) => { await window.crucible.saveSettings({ providers: [...s.providers.map(({ hasKey, ...p }) => p), { id: 'strict', name: 'Strict', type: 'openai', baseUrl: 'http://127.0.0.1:${server.address().port}/strict/v1', model: 'gpt-6.1-sol', maxTokens: 777 }] }); return window.crucible.aiChat({ providerId: 'strict', system: 'You are a connection test.', messages: [{ role: 'user', content: 'ready?' }] }); })`);
+  check('OpenAI models that refuse max_tokens work (switches to max_completion_tokens)', strictR.ok && lastRequest.body.max_completion_tokens === 777 && !('max_tokens' in lastRequest.body), JSON.stringify(strictR).slice(0, 160));
+  if (FIX) {
+    // Linked pictures are copied into the book; old absolute-path links are adopted.
+    const png = path.join(FIX, 'test.png');
+    const lp = await js(`window.crucible.linkPicture({ bookPath: S.path, from: ${JSON.stringify(png)} })`);
+    const side = path.join(path.dirname(await js('S.path')), path.basename(await js('S.path'), '.md') + '.crucible', 'linked');
+    check('Desktop: linked picture copied into the book', !!lp && lp.ref.startsWith('bk:linked/') && fs.existsSync(path.join(side, lp.ref.slice('bk:linked/'.length))), JSON.stringify(lp));
+    check('Desktop: book-relative picture opens', (await js(`mediaUrl(${JSON.stringify(lp.ref)})`)).startsWith('data:image/png'));
+    const notPic = path.join(TMP, 'fake-picture.png');
+    fs.writeFileSync(notPic, 'TOP-SECRET not really a png');
+    check('Desktop: only real pictures can be linked into a book', (await js(`window.crucible.linkPicture({ bookPath: S.path, from: ${JSON.stringify(notPic)} })`)) === null);
+    const adopted = await js(`(async () => { S.project.links.push({ id: 'old1', kind: 'image', path: ${JSON.stringify(png)}, label: 'old', text: 'x', start: 0, end: 1, created: 0 }); Links._adopting = null; await Links.adoptPictures(); const p = S.project.links.find((l) => l.id === 'old1').path; S.project.links = S.project.links.filter((l) => l.id !== 'old1'); return p; })()`);
+    check('Desktop: pictures linked by older versions are copied in automatically', adopted.startsWith('bk:linked/'), adopted);
+    // Writing background photo
+    const bgr = await js(`window.crucible.chooseBackground()`);
+    const bgUrl = bgr && await js(`window.crucible.backgroundUrl(${JSON.stringify(bgr.ref)})`);
+    await js(`App.applyBackground({ bgImage: ${JSON.stringify(bgr?.ref || '')}, bgOpacity: 30 })`);
+    await wait(200);
+    const bgOn = await js(`({ has: $('#editorWrap').classList.contains('has-bg'), bg: getComputedStyle($('#editorPane')).backgroundImage.includes('url(') })`);
+    check('Desktop: background photo stored and shown behind the typing area', !!bgr && bgr.ref.startsWith('bg:') && (bgUrl || '').startsWith('data:image/png') && bgOn.has && bgOn.bg, JSON.stringify({ bgr, bgOn }));
+    check('Desktop: background reads only its own folder', (await js(`window.crucible.backgroundUrl('bg:../../settings.json')`)) === null && (await js(`window.crucible.backgroundUrl('/etc/passwd')`)) === null);
+    await js(`App.applyBackground({ bgImage: '' })`);
+  }
   check('No renderer console errors', errors.length === 0, errors.join(' | '));
 
   // ---- Security: replay the independent review's attacks ----------------

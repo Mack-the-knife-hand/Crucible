@@ -457,10 +457,17 @@
       messages.forEach((m, i) => msgs.push(i === lastUser && images.length
         ? { role: 'user', content: [...images.map((im) => ({ type: 'image_url', image_url: { url: `data:${im.mime};base64,${im.data}` } })), { type: 'text', text: m.content }] }
         : { role: m.role, content: m.content }));
-      const body = { model: p.model, messages: msgs, max_tokens: maxTokens };
-      if (temperature !== undefined) body.temperature = temperature;
-      const j = await post(`${trim(p.baseUrl) || 'https://api.openai.com/v1'}/chat/completions`, key ? { authorization: `Bearer ${key}` } : {}, body);
-      return j.choices?.[0]?.message?.content || '';
+      let body = SettingsCore.openAIChatBody(p.baseUrl, { model: p.model, messages: msgs, maxTokens, temperature });
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const j = await post(`${trim(p.baseUrl) || 'https://api.openai.com/v1'}/chat/completions`, key ? { authorization: `Bearer ${key}` } : {}, body);
+          return j.choices?.[0]?.message?.content || '';
+        } catch (e) {
+          const fixed = attempt < 2 ? SettingsCore.fixOpenAIBody(e.message, body) : null;
+          if (!fixed) throw e;
+          body = fixed; // the server told us which parameter name it wants: retry
+        }
+      }
     } finally {
       clearTimeout(timer);
     }
@@ -871,12 +878,14 @@
       }
       if (!root) { root = new BrowserRoot(`${name}/`); key = `Browser storage/${name}`; }
       if (await root.exists(name) && !(await confirmModal('Replace file?', `"${name}" already exists there. Replace it?`, 'Replace'))) return null;
-      // Carry story memory and chapter images across to the new location.
+      // Carry story memory, linked pictures and chapter images across.
       if (currentPath && books.has(currentPath)) {
         const from = bookOf(currentPath);
-        const memDir = `${sidecarOf(from.file)}/memory`;
-        for (const f of await from.root.list(memDir)) {
-          await root.write(`${sidecarOf(name)}/memory/${f}`, await from.root.read(`${memDir}/${f}`, true));
+        for (const sub of ['memory', 'linked']) {
+          const dir = `${sidecarOf(from.file)}/${sub}`;
+          for (const f of await from.root.list(dir)) {
+            await root.write(`${sidecarOf(name)}/${sub}/${f}`, await from.root.read(`${dir}/${f}`, true));
+          }
         }
         if (from.root.dir !== root.dir || from.root.prefix !== root.prefix) {
           for (const f of await from.root.list('images')) {
@@ -921,6 +930,58 @@
       if (p.path.startsWith('sess:')) sessionBlobs.delete(p.path);
       return { rel: `images/${name}`, name: p.name };
     },
+    // Linked pictures are copied into "<Book>.crucible/linked/" so they travel
+    // with the book. from: a picture linked earlier (copied in once).
+    async linkPicture({ bookPath, from } = {}) {
+      const { root, file } = bookOf(bookPath);
+      let blob, name, pickRef = null;
+      if (from) {
+        try { blob = await blobFor(from); } catch { blob = null; }
+        name = from.split('/').pop().replace(/^[\w-]+_/, '');
+      } else {
+        const [p] = await pickFiles('image/*', IMAGES, false);
+        if (!p) return null;
+        blob = p.file; name = p.name; pickRef = p.path;
+      }
+      if (!blob || blob.size > 100 * 1024 * 1024) return null;
+      const h = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+      const img = (h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47) || (h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff)
+        || (h[0] === 0x47 && h[1] === 0x49 && h[2] === 0x46) || (h[0] === 0x42 && h[1] === 0x4d)
+        || (h[0] === 0x52 && h[1] === 0x49 && h[2] === 0x46 && h[3] === 0x46 && h[8] === 0x57 && h[9] === 0x45 && h[10] === 0x42 && h[11] === 0x50);
+      if (!img) return null;
+      let ext = extOf(name || '');
+      if (!IMAGES.includes(ext)) ext = '.png';
+      const safe = (name || 'picture').replace(/\.[^.]+$/, '').replace(/[^\w.\- ]+/g, '_').slice(-60) + ext;
+      const stored = `${idOf()}_${safe}`;
+      await root.write(`${sidecarOf(file)}/linked/${stored}`, blob);
+      if (pickRef && pickRef.startsWith('h:')) await DB.del('kv', 'handle:' + pickRef.slice(2)); // the copy is what's kept
+      return { ref: `bk:linked/${stored}`, name: name || safe };
+    },
+
+    // Writing-area background photo. In your Crucible folder when one is
+    // connected (so it travels with the drive), otherwise kept in this browser.
+    async chooseBackground() {
+      const [p] = await pickFiles('image/*', IMAGES, false);
+      if (!p) return null;
+      if (p.file.size > 20 * 1024 * 1024) throw new Error('That picture is too large (20 MB at most).');
+      if (p.path.startsWith('home:')) return { ref: p.path, name: p.name };
+      const id = idOf();
+      let ref;
+      if (home) {
+        const stored = `${id}${extOf(p.name) || '.png'}`;
+        await new FolderRoot(home).write(`Crucible backgrounds/${stored}`, p.file);
+        ref = homeRef(['Crucible backgrounds', stored]);
+      } else {
+        await DB.set('kv', 'handle:' + id, { blob: p.file });
+        ref = 'h:' + id;
+      }
+      if (p.path.startsWith('h:')) await DB.del('kv', 'handle:' + p.path.slice(2));
+      return { ref, name: p.name };
+    },
+    async backgroundUrl(ref) {
+      try { return ref ? await urlFor(ref) : null; } catch { return null; }
+    },
+
     async readBookImage({ bookPath, rel }) {
       if (!books.has(bookPath)) return null;
       if (typeof rel !== 'string') return null;

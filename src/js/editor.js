@@ -122,7 +122,11 @@ const Editor = {
     $('#stSel').textContent = b > a ? `${countWords(this.ta.value.slice(a, b))} selected` : '';
     const cur = this.chapterAt(a);
     $('#stChapter').textContent = cur ? cur.title : '';
-    $$('#outline .ol-item').forEach((n) => n.classList.toggle('cur', cur && +n.dataset.offset === cur.offset));
+    // Highlight the heading you're in, or the folded chapter that holds it.
+    const items = $$('#outline .ol-item');
+    let mark = null;
+    if (cur) for (const n of items) if (+n.dataset.offset <= cur.offset) mark = n;
+    items.forEach((n) => n.classList.toggle('cur', n === mark));
     Bus.emit('caret', a);
   },
 
@@ -291,11 +295,29 @@ const Editor = {
       box.append(el('div', { class: 'empty' }, 'Chapters appear here from your Markdown headings (# Chapter One, ## Scene…).'));
       return;
     }
-    for (const h of this.outline) {
+    // Folding: a heading with sub-headings under it (a chapter with dated
+    // scenes, say) gets a ▾ arrow; click it to hide or show them. Folds are
+    // remembered with the book (saved the next time you save).
+    const ol = this.outline;
+    const counts = {};
+    const keys = ol.map((h) => { const k = `${h.level}|${h.title}`; counts[k] = (counts[k] || 0) + 1; return `${k}|${counts[k]}`; });
+    const kids = ol.map((h, i) => { let j = i + 1; while (j < ol.length && ol[j].level > h.level) j++; return j - i - 1; });
+    const folded = new Set(S.project?.meta?.outlineFolded || []);
+    const setFolds = (list) => {
+      if (S.project) S.project.meta.outlineFolded = [...list];
+      this.renderOutline();
+      this.onCaret();
+    };
+    const toggle = (k) => { if (folded.has(k)) folded.delete(k); else folded.add(k); setFolds(folded); };
+    const parents = keys.filter((k, i) => kids[i]);
+    for (let i = 0; i < ol.length; i++) {
+      const h = ol[i], k = keys[i], n = kids[i], shut = n && folded.has(k);
+      // Folded: show the words of the whole chapter, sub-sections included.
+      const words = shut ? ol.slice(i, i + n + 1).reduce((a, x) => a + x.words, 0) : h.words;
       box.append(el('div', {
-        class: `ol-item ol-${h.level}`,
+        class: `ol-item ol-${h.level}${shut ? ' folded' : ''}`,
         'data-offset': h.offset,
-        title: `${h.title} (right-click to select or correct it)`,
+        title: `${h.title}${shut ? ` (${n} hidden: click ▸ to show)` : ''} (right-click to select or correct it)`,
         onclick: () => this.reveal(h.offset),
         oncontextmenu: (e) => {
           e.preventDefault();
@@ -304,9 +326,17 @@ const Editor = {
             ['✓  Correct prose in it…', () => { this.selectSection(h.offset); Prose.openFor('selection'); }],
             ['→  Go to it', () => this.reveal(h.offset)],
             ['☰  Chapter builder…', () => Chapters.open()],
+            ...(parents.length ? [['▸  Fold all', () => setFolds(parents)], ['▾  Unfold all', () => setFolds([])]] : []),
           ]);
         },
-      }, el('span', { class: 'wc' }, h.words.toLocaleString()), h.title));
+      },
+      el('span', { class: 'wc', title: shut ? 'Words in the whole chapter' : '' }, words.toLocaleString()),
+      n ? el('span', {
+        class: 'ol-tog', title: shut ? `Show the ${n} heading${n === 1 ? '' : 's'} under this` : 'Hide the headings under this',
+        onclick: (e) => { e.stopPropagation(); toggle(k); },
+      }, shut ? '▸' : '▾') : el('span', { class: 'ol-tog none' }),
+      h.title));
+      if (shut) i += n; // skip what's folded away
     }
   },
 

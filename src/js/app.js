@@ -21,6 +21,7 @@ const App = {
     AI.init();
     Links.init();
     Notes.init();
+    Highlights.init();
     Speech.init();
     Goals.init();
     Player.init();
@@ -227,12 +228,35 @@ const App = {
     document.documentElement.dataset.theme = ui.theme || 'dark';
     $('#btnTheme').textContent = ui.theme === 'light' ? 'Dark' : 'Light';
     document.documentElement.style.setProperty('--editor-size', (ui.fontSize || 17) + 'px');
+    this.applyBackground(ui);
+    if (typeof Highlights !== 'undefined' && Highlights.refresh) { Highlights.previewOn = undefined; Highlights.refresh(); } // text size changes the wrapping
+  },
+
+  // Writing-area background photo, seen through a veil of the theme's own
+  // background colour: opacity 25 % shows a quarter of the photo.
+  async applyBackground(ui) {
+    const wrap = $('#editorWrap');
+    const root = document.documentElement.style;
+    const op = Math.max(0, Math.min(100, Number(ui.bgOpacity ?? 25)));
+    root.setProperty('--bg-veil', `${100 - op}%`);
+    wrap.classList.toggle('bg-read', !!ui.bgRead);
+    const ref = ui.bgImage || '';
+    if (!ref) { wrap.classList.remove('has-bg'); root.removeProperty('--editor-bg'); this._bgRef = ''; return; }
+    if (this._bgRef !== ref) {
+      this._bgRef = ref;
+      const url = await window.crucible.backgroundUrl(ref).catch(() => null);
+      if (this._bgRef !== ref) return; // changed again meanwhile
+      if (!url) { wrap.classList.remove('has-bg'); root.removeProperty('--editor-bg'); return; }
+      root.setProperty('--editor-bg', `url("${url.replace(/["\\\n]/g, '')}")`);
+    }
+    wrap.classList.add('has-bg');
   },
 
   renderAll() {
     Pool.render();
     Memory.render();
     Links.render();
+    Highlights.refresh();
     AI.renderContext();
     AI.renderChat();
     Prose.render();

@@ -60,6 +60,7 @@ const Notes = {
   },
 
   render(highlight = []) {
+    Highlights.refresh();
     if (!S.project) return;
     const list = $('#notesList');
     const open = this.list().filter((n) => !n.resolved);

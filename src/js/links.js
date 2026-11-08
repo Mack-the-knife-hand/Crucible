@@ -1,10 +1,13 @@
 // =============================================================================
 // links.js — songs and pictures linked to passages
 // -----------------------------------------------------------------------------
-// A link is just { kind, path, passage range } saved in project.json. The song
-// or picture is NOT copied into the book and never appears in the manuscript
-// or the PDF. If you move the file on disk, the link shows as missing and you
-// can re-point it.
+// A link is just { kind, path, passage range } saved in project.json. It never
+// appears in the manuscript, the PDF, Word or EPUB.
+// Pictures are copied into "<Book>.crucible/linked/" (path "bk:linked/…") so
+// they travel with the book to any computer. Pictures linked by older
+// versions are copied in automatically the first time the book is opened
+// where the original can still be reached. Songs stay where they are (they're
+// big); keep them in your Crucible folder's Music folder to have them travel.
 //
 // "Auto-play" mode: as your cursor moves into a passage that has a song linked,
 // Crucible starts that song — a soundtrack that follows you through the book.
@@ -61,7 +64,8 @@ const Links = {
         const img = el('img');
         Memory.pathOf(m).then(mediaUrl).then((u) => (img.src = u)).catch(() => {});
         list.append(el('div', {
-          class: 'mi', onclick: async () => { choose(await Memory.pathOf(m), m.notes ? snippet(m.notes, 40) : m.name); modal.close(); },
+          // Story-memory pictures already live inside the book.
+          class: 'mi', onclick: () => { choose(`bk:memory/${m.file}`, m.notes ? snippet(m.notes, 40) : m.name); modal.close(); },
         }, img, m.name));
       }
     }
@@ -73,16 +77,26 @@ const Links = {
         {
           label: 'Browse for a file…', accent: true,
           onClick: async () => {
-            const f = asPick(kind === 'song' ? (await window.crucible.pickSongs())[0] : await window.crucible.pickImage());
-            if (f) choose(f.path, f.name);
+            if (kind === 'song') {
+              const f = asPick((await window.crucible.pickSongs())[0]);
+              if (f) choose(f.path, f.name);
+              return;
+            }
+            if (!S.path) { toast('Save the book first, so the picture can be kept with it.', true, 6000); return false; }
+            const r = await window.crucible.linkPicture({ bookPath: S.path }).catch((e) => { toast(e.message, true, 6000); return null; });
+            if (r) choose(r.ref, r.name);
           },
         },
       ],
     });
   },
 
+  exists(link) {
+    return BookRef.is(link.path) ? BookRef.exists(link.path) : window.crucible.fileExists(link.path);
+  },
+
   async open(link) {
-    if (!(await window.crucible.fileExists(link.path))) {
+    if (!(await this.exists(link))) {
       return toast(`File not found: ${link.label}`, true);
     }
     if (link.kind === 'song') return Player.playPath(link.path, link.label);
@@ -103,7 +117,12 @@ const Links = {
   },
 
   async repoint(link) {
-    const p = asPick(link.kind === 'song' ? (await window.crucible.pickSongs())[0] : await window.crucible.pickImage());
+    let p;
+    if (link.kind === 'song') p = asPick((await window.crucible.pickSongs())[0]);
+    else {
+      const r = S.path ? await window.crucible.linkPicture({ bookPath: S.path }).catch(() => null) : null;
+      p = r && { path: r.ref, name: r.name };
+    }
     if (!p) return;
     link.path = p.path;
     link.label = p.name;
@@ -137,7 +156,32 @@ const Links = {
     }
   },
 
+  // Pictures linked by earlier versions point at a spot on one computer.
+  // Wherever the original can still be reached, copy it into the book once,
+  // so from then on it works everywhere.
+  async adoptPictures() {
+    const key = S.path;
+    if (!key || this._adopting === key) return;
+    this._adopting = key;
+    let n = 0;
+    for (const l of S.project.links) {
+      if (l.kind !== 'image' || BookRef.is(l.path)) continue;
+      try {
+        if (!(await window.crucible.fileExists(l.path))) continue;
+        const r = await window.crucible.linkPicture({ bookPath: key, from: l.path });
+        if (r && S.path === key) { l.path = r.ref; n++; }
+      } catch { /* leave it as it was */ }
+    }
+    if (n && S.path === key) {
+      markDirty(true);
+      toast(`${n} linked picture${n === 1 ? ' was' : 's were'} copied into the book, so ${n === 1 ? 'it works' : 'they work'} on any computer. Save to keep this.`, false, 7000);
+      this.render();
+    }
+  },
+
   async render() {
+    this.adoptPictures();
+    Highlights.refresh();
     const list = $('#linkList');
     $('#linkBadge').textContent = S.project.links.length;
     $('#ambientToggle').checked = !!S.project.meta.ambient;
@@ -145,12 +189,12 @@ const Links = {
     if (!S.project.links.length) {
       list.append(el('div', { class: 'empty' },
         'Right-click in the manuscript → "Link a song" or "Link a picture" to tie music or images to a scene. ',
-        el('br'), el('br'), 'They are referenced, never embedded — they won\'t appear in the text or the PDF.'));
+        el('br'), el('br'), 'They never appear in the text or the exports. Pictures are kept in the book\'s .crucible folder, so they travel with it.'));
       return;
     }
     const sorted = [...S.project.links].sort((a, b) => a.start - b.start);
     for (const l of sorted) {
-      const exists = await window.crucible.fileExists(l.path);
+      const exists = await this.exists(l);
       list.append(el('div', { class: `card ${exists ? '' : 'missing'}` },
         el('div', { class: 'row' },
           el('span', { class: 'tag' }, l.kind === 'song' ? '♪ song' : '▣ picture'),
@@ -161,7 +205,7 @@ const Links = {
           el('button', { class: 'small accent', disabled: !exists, onclick: () => this.open(l) }, l.kind === 'song' ? 'Play' : 'View'),
           el('button', { class: 'small', onclick: () => this.goTo(l) }, 'Go to'),
           el('button', { class: 'small', onclick: () => this.repoint(l) }, 'Change file'),
-          window.crucible.platform === 'web' ? null : el('button', { class: 'small ghost', onclick: () => window.crucible.reveal(l.path) }, 'Show file'),
+          window.crucible.platform === 'web' || BookRef.is(l.path) ? null : el('button', { class: 'small ghost', onclick: () => window.crucible.reveal(l.path) }, 'Show file'),
           el('button', { class: 'small ghost danger', onclick: () => this.remove(l) }, '✕'))));
     }
   },

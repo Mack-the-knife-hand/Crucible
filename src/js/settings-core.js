@@ -37,7 +37,13 @@
       activeProviderId: null,
       playlist: [],
       volume: 0.7,
-      ui: { theme: 'dark', fontSize: 17, view: 'edit', leftCollapsed: false, rightCollapsed: false, autosave: false },
+      ui: {
+        theme: 'dark', fontSize: 17, view: 'edit', leftCollapsed: false, rightCollapsed: false, autosave: false,
+        bgImage: '',     // writing-area background photo (a reference, not the picture)
+        bgOpacity: 25,   // how much of the photo shows, 0–100 %
+        bgRead: false,   // also behind the Read / Split preview
+        highlightLinked: true, // colour passages with pictures (purple), notes (orange), songs (green)
+      },
       recent: [],
       recentHome: [],     // books inside your Crucible folder (paths relative to it)
       keysInFile: true,   // browser edition: keep API keys in crucible-settings.json
@@ -183,7 +189,40 @@
     return { next, keysMissing, skippedSongs: incoming.length - usable.length, providers: (file.providers || []).length, endpointChanges };
   }
 
-  const api = { SETTINGS_SCHEMA, MEMORY_LIMIT, clampMemoryLimit, defaultSettings, migrateSettings, portableSettings, mergeImported, endpointChanged, keyFor, normUrl, hostOf };
+  // ---- OpenAI-compatible request bodies --------------------------------
+  // OpenAI's own servers (newer reasoning models such as gpt-5.x / gpt-6.x
+  // "Sol") refuse "max_tokens" and want "max_completion_tokens"; Ollama, LM
+  // Studio and most compatible servers still want "max_tokens". So: the new
+  // name for api.openai.com, the old one elsewhere, and if a server says it
+  // wants the other one (or won't take a custom temperature), adjust and
+  // retry once.
+  function isOpenAIHost(baseUrl) {
+    if (!String(baseUrl || '').trim()) return true; // default is OpenAI
+    try { return /(^|\.)openai\.com$/i.test(new URL(baseUrl).hostname); } catch { return false; }
+  }
+  function openAIChatBody(baseUrl, { model, messages, maxTokens, temperature }) {
+    const body = { model, messages };
+    body[isOpenAIHost(baseUrl) ? 'max_completion_tokens' : 'max_tokens'] = maxTokens;
+    if (temperature !== undefined) body.temperature = temperature;
+    return body;
+  }
+  // Given a server's error message, return a corrected body, or null.
+  function fixOpenAIBody(message, body) {
+    const m = String(message || '');
+    const next = { ...body };
+    if ('max_tokens' in next && /max_tokens/.test(m) && /max_completion_tokens|not supported|unsupported/i.test(m)) {
+      next.max_completion_tokens = next.max_tokens; delete next.max_tokens; return next;
+    }
+    if ('max_completion_tokens' in next && /max_completion_tokens/.test(m) && /max_tokens|not supported|unsupported|unrecognized|unknown/i.test(m)) {
+      next.max_tokens = next.max_completion_tokens; delete next.max_completion_tokens; return next;
+    }
+    if ('temperature' in next && /temperature/i.test(m) && /not supported|unsupported|only the default|does not support/i.test(m)) {
+      delete next.temperature; return next;
+    }
+    return null;
+  }
+
+  const api = { isOpenAIHost, openAIChatBody, fixOpenAIBody, SETTINGS_SCHEMA, MEMORY_LIMIT, clampMemoryLimit, defaultSettings, migrateSettings, portableSettings, mergeImported, endpointChanged, keyFor, normUrl, hostOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SettingsCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

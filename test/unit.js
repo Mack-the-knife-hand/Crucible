@@ -288,3 +288,16 @@ console.log('Endpoint approval tests passed');
   assert.ok(/NOT VERIFIED/.test(r.stdout) && !/All shipped components check out/.test(r.stdout), r.stdout);
 }
 console.log('Audit honesty test passed');
+// ---- OpenAI parameter names (1.9.3)
+{
+  const C = require('../src/js/settings-core.js');
+  assert.deepStrictEqual(C.openAIChatBody('https://api.openai.com/v1', { model: 'gpt-6.1-sol', messages: [], maxTokens: 10 }), { model: 'gpt-6.1-sol', messages: [], max_completion_tokens: 10 });
+  assert.deepStrictEqual(C.openAIChatBody('', { model: 'm', messages: [], maxTokens: 10 }), { model: 'm', messages: [], max_completion_tokens: 10 });
+  assert.deepStrictEqual(C.openAIChatBody('http://localhost:11434/v1', { model: 'm', messages: [], maxTokens: 10, temperature: 0.5 }), { model: 'm', messages: [], max_tokens: 10, temperature: 0.5 });
+  assert.ok(!C.isOpenAIHost('https://notopenai.com.evil.example/v1'));
+  const fixed = C.fixOpenAIBody("Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", { model: 'm', max_tokens: 10 });
+  assert.deepStrictEqual(fixed, { model: 'm', max_completion_tokens: 10 });
+  assert.deepStrictEqual(C.fixOpenAIBody("Unrecognized request argument supplied: max_completion_tokens", { max_completion_tokens: 5 }), { max_tokens: 5 });
+  assert.strictEqual(C.fixOpenAIBody('Incorrect API key provided', { max_tokens: 1 }), null);
+}
+console.log('OpenAI parameter tests passed');

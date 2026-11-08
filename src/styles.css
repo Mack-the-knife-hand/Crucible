@@ -174,6 +174,11 @@ body.right-collapsed #workspace { --rw: 38px; }
 .ol-item.cur { background: var(--ember-glow); color: var(--ember-2); }
 .ol-item .wc { float: right; color: var(--muted); font-size: 11px; margin-left: 6px; }
 .ol-1 { font-weight: 600; }
+.ol-tog { display: inline-block; width: 16px; margin-left: -4px; text-align: center; color: var(--muted); font-size: 11px; cursor: pointer; border-radius: 3px; user-select: none; }
+.ol-tog:hover { color: var(--ember-2); background: var(--panel); }
+.ol-tog.none { cursor: default; }
+.ol-tog.none:hover { background: none; }
+.ol-item.folded .wc { color: var(--ember-2); }
 .ol-2 { padding-left: 20px; }
 .ol-3 { padding-left: 34px; color: var(--muted); }
 
@@ -233,6 +238,37 @@ body.right-collapsed #workspace { --rw: 38px; }
 #editor::selection { background: var(--sel); }
 #editor:focus { outline: none; }
 #previewPane { overflow-y: auto; display: block; }
+/* Writing-area background photo (Settings → Writing background). The photo
+   sits behind a veil of the theme's background colour; --bg-veil is how much
+   of the veil covers it (100 % - opacity). The text area itself is see-through. */
+#editorWrap.has-bg #editorPane,
+#editorWrap.has-bg.bg-read #previewPane {
+  background:
+    linear-gradient(color-mix(in srgb, var(--bg) var(--bg-veil, 75%), transparent), color-mix(in srgb, var(--bg) var(--bg-veil, 75%), transparent)),
+    var(--editor-bg) center / cover no-repeat,
+    var(--bg);
+}
+#editorWrap.has-bg #editor { background: transparent; }
+
+/* Coloured passages (highlights.js): a backdrop with the same text, invisible,
+   behind the transparent textarea; only the marks show. */
+#editorPane { position: relative; }
+#editor { position: relative; z-index: 1; background: transparent; }
+#editorPane { background: var(--bg); }
+#hlBackdrop { position: absolute; z-index: 0; overflow: hidden; pointer-events: none; }
+#hlBackdrop.hidden { display: none; }
+#hlBackdrop .hl-inner { box-sizing: border-box; width: 100%; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; color: transparent; will-change: transform; }
+#hlBackdrop mark { color: transparent; border-radius: 3px; padding: 0; }
+:root { --hl-img: rgba(176, 132, 255, .30); --hl-note: rgba(255, 152, 48, .32); --hl-song: rgba(96, 214, 112, .30); }
+:root[data-theme="light"] { --hl-img: rgba(150, 100, 240, .22); --hl-note: rgba(255, 140, 20, .26); --hl-song: rgba(60, 190, 80, .24); }
+#hlBackdrop mark.hl-img { background: var(--hl-img); }
+#hlBackdrop mark.hl-note { background: var(--hl-note); }
+#hlBackdrop mark.hl-song { background: var(--hl-song); }
+/* More than one on the same words: stripes, one band per kind. */
+#hlBackdrop mark.hl-2.hl-img.hl-note { background: linear-gradient(var(--hl-img) 50%, var(--hl-note) 50%); }
+#hlBackdrop mark.hl-2.hl-img.hl-song { background: linear-gradient(var(--hl-img) 50%, var(--hl-song) 50%); }
+#hlBackdrop mark.hl-2.hl-note.hl-song { background: linear-gradient(var(--hl-note) 50%, var(--hl-song) 50%); }
+#hlBackdrop mark.hl-3 { background: linear-gradient(var(--hl-img) 33%, var(--hl-note) 33% 66%, var(--hl-song) 66%); }
 
 .manuscript {
   max-width: 68ch; margin: 0 auto; padding: 44px 6% 30vh;
@@ -254,8 +290,6 @@ body.right-collapsed #workspace { --rw: 38px; }
   background: var(--panel); border-top: 1px solid var(--line);
 }
 #stDirty { color: var(--ember-2); }
-#stDirty[data-state="error"] { color: var(--warn); font-weight: 700; }
-#statusbar { flex-wrap: wrap; height: auto; min-height: 30px; }
 #statusbar > * { flex-shrink: 0; }
 #statusbar #stFile { flex-shrink: 1; min-width: 40px; overflow: hidden; text-overflow: ellipsis; }
 #statusbar #stChapter { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
@@ -538,6 +572,14 @@ input[type="range"] { accent-color: var(--ember); padding: 0; border: 0; backgro
 .about-note p { margin: 0 0 8px; }
 .about-sign { text-align: right; font-style: italic; margin: 4px 0 0 !important; }
 
+.bg-thumb { width: 64px; height: 40px; border-radius: 5px; border: 1px solid var(--line); background: var(--panel-2) center / cover no-repeat; flex: none; }
+.bg-thumb.empty { background-image: repeating-linear-gradient(45deg, transparent 0 6px, var(--line) 6px 7px); }
+
+.hl-key { padding: 0 5px; border-radius: 3px; color: var(--fg); }
+.hl-key.hl-img { background: var(--hl-img); } .hl-key.hl-note { background: var(--hl-note); } .hl-key.hl-song { background: var(--hl-song); }
+
+#stDirty[data-state="error"] { color: var(--warn); font-weight: 700; }
+#statusbar { flex-wrap: wrap; height: auto; min-height: 30px; }
 .ai-context-help { grid-column: 1 / -1; max-height: 220px; overflow: auto; font-size: 12px; line-height: 1.5; margin: 6px 0; color: var(--muted); }
 .ai-context-help summary { cursor: pointer; }
 .ai-context-help p { margin: 6px 0; }

@@ -13,9 +13,9 @@ Crucible is a free, portable writing workspace with optional AI assistance. Writ
 3. Choose your Crucible working folder and grant the browser permission to save there.
 4. Create a practice book, save it, and reopen it before using your main manuscript.
 
-**[Read the illustrated PDF instructions](docs/Crucible-1.9.3-Work-Instructions.pdf)** - includes the program logo and MP3-player controls.
+**[Read the illustrated PDF instructions](docs/Crucible-1.9.3-Work-Instructions.pdf)** - covers version 1.9.3; newer controls are described below.
 
-For the complete source, choose **Code > Download ZIP**. Extract it before opening `crucible.html`. This repository contains the browser edition and desktop source, not a prebuilt Windows executable. GitHub's file view does not run the editor: download the HTML first.
+For the complete source, choose **Code > Download ZIP**. Extract it before opening `crucible.html`. The [latest release](https://github.com/Mack-the-knife-hand/Crucible/releases/latest) includes the portable Windows application. Extract the whole Windows ZIP before running `Crucible.exe`. GitHub's file view does not run the editor: download the HTML first.
 
 ## What is included
 
@@ -34,7 +34,9 @@ Keep each `.md` manuscript together with its matching `.crucible` folder and ref
 
 To update, save and close the app, back up your working folder, and replace only `crucible.html`. Preserve settings, books and companion files. The author's About statement is unchanged.
 
-## Version 1.9.3
+## Version 1.9.8
+
+Version 1.9.8 adds portable linked pictures, writing-area background images, colored passage markers, collapsible outlines, expanded beta-reader controls, and updated OpenAI request handling. This GitHub build also retains the existing save and navigation protections.
 
 The refinement protects edits made while saving, prevents overlapping writes, adds persistent save-error feedback and Retry save, and checks unsaved work before switching books. It also explains AI context and fixes Windows line-ending handling in browser script-security hashes.
 

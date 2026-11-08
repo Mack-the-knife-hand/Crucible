@@ -1,6 +1,6 @@
 {
   "name": "crucible",
-  "version": "1.9.3",
+  "version": "1.9.8",
   "description": "A free, standalone manuscript editor: AI revision desk, prose and continuity passes, story memory, corkboard, timeline, and PDF/Word/EPUB export.",
   "main": "main.js",
   "scripts": {

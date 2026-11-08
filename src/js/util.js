@@ -43,8 +43,26 @@ function fileUrl(p) {
 // Turn a stored media reference into something <img>/<audio> can load.
 // Desktop: a disk path -> file:// URL. Browser: a reference -> blob: URL.
 async function mediaUrl(p) {
+  if (BookRef.is(p)) return BookRef.url(p);
   return window.crucible.urlFor ? window.crucible.urlFor(p) : fileUrl(p);
 }
+
+// "bk:linked/x.png" / "bk:memory/x.png": a picture kept INSIDE the open book's
+// .crucible folder, so the reference works on any computer and drive letter.
+const BookRef = {
+  is: (p) => typeof p === 'string' && p.startsWith('bk:'),
+  rel(p) {
+    const base = baseName(S.path || '').replace(/\.[^.]+$/, '');
+    const sub = p.slice(3).split('/').filter((x) => x && x !== '.' && x !== '..').join('/');
+    return `${base}.crucible/${sub}`;
+  },
+  async url(p) {
+    const u = S.path ? await window.crucible.readBookImage({ bookPath: S.path, rel: this.rel(p) }) : null;
+    if (!u) throw new Error('That picture is missing from the book folder.');
+    return u;
+  },
+  async exists(p) { return !!(S.path && (await window.crucible.readBookImage({ bookPath: S.path, rel: this.rel(p) }).catch(() => null))); },
+};
 
 // Pickers return either plain paths (desktop) or {path, name} (browser).
 function asPick(p) {

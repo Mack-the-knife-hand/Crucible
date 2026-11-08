@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('crucible', {
   addMemory: invoke('memory:add'),
   chooseChapterImage: invoke('book:chooseImage'),
   readBookImage: invoke('book:readImage'),
+  linkPicture: invoke('book:linkPicture'),
   newMemoryNote: invoke('memory:newNote'),
   readMemoryText: invoke('memory:readText'),
   writeMemoryText: invoke('memory:writeText'),
@@ -40,6 +41,8 @@ contextBridge.exposeInMainWorld('crucible', {
 
   // Settings / AI / export
   getSettings: invoke('settings:get'),
+  chooseBackground: invoke('settings:chooseBackground'),
+  backgroundUrl: invoke('settings:backgroundUrl'),
   saveSettings: invoke('settings:save'),
   exportSettings: invoke('settings:export'),
   importSettings: invoke('settings:import'),

@@ -189,7 +189,7 @@ const Settings = {
             el('strong', {}, info ? info.name : 'not chosen'),
             el('span', { class: 'muted' }, info ? (info.connected ? '· saving to crucible-settings.json' : '· not opened this session') : ''),
             el('span', { class: 'spacer' }),
-            el('button', { class: 'small', onclick: async () => { const r = await c.connectHome(!!info?.connected); if (r.ok) { App.reloadSettings(r.settings); toast(r.loaded ? 'Settings loaded from that folder' : 'Settings file created there'); await Settings.reviewEndpoints(r, 'This folder'); renderWhere(); } } },
+            el('button', { class: 'small', onclick: async () => { const r = await c.connectHome(!!info?.connected); if (r.ok) { App.reloadSettings(r.settings); toast(r.loaded ? 'Settings loaded from that folder' : 'Settings file created there'); renderWhere(); } } },
               info?.connected ? 'Change…' : info ? `Open ${info.name}` : 'Choose…'))),
         el('div', { class: 'hint', style: 'margin:-4px 0 6px 160px;font-size:11.5px' }, 'The folder holding crucible.html (e.g. your thumb drive). Your settings are saved there so they travel with it.'),
         el('div', { class: 'field' }, el('label', {}, 'API keys in file'), el('label', { class: 'check' }, keys, 'Keep API keys in crucible-settings.json')),
@@ -239,7 +239,42 @@ const Settings = {
     showMem();
 
     const fontSize = el('input', { type: 'number', min: '12', max: '28', value: ui.fontSize });
-    fontSize.oninput = () => { ui.fontSize = +fontSize.value; document.documentElement.style.setProperty('--editor-size', ui.fontSize + 'px'); };
+    fontSize.oninput = () => { ui.fontSize = +fontSize.value; document.documentElement.style.setProperty('--editor-size', ui.fontSize + 'px'); Highlights.refresh(); };
+    const hlBox = el('input', { type: 'checkbox', checked: ui.highlightLinked !== false });
+    hlBox.addEventListener('change', () => { ui.highlightLinked = hlBox.checked; Highlights.previewOn = hlBox.checked; Highlights.render(); });
+
+    // Writing background: photo + opacity, previewed live (Cancel undoes it).
+    const bgThumb = el('div', { class: 'bg-thumb' });
+    const bgName = el('span', { class: 'muted', style: 'font-size:12px' });
+    const bgOp = el('input', { type: 'range', min: '0', max: '100', step: '1', value: ui.bgOpacity ?? 25, style: 'flex:1' });
+    const bgOpVal = el('span', { class: 'muted', style: 'width:44px;text-align:right;font-variant-numeric:tabular-nums' });
+    const bgRead = el('input', { type: 'checkbox', checked: !!ui.bgRead });
+    const bgRemove = el('button', { class: 'small ghost bg-remove', title: 'Remove the background photo' }, 'Remove photo');
+    const bgShow = async () => {
+      bgOpVal.textContent = `${bgOp.value}%`;
+      bgRemove.disabled = !ui.bgImage;
+      [bgOp, bgRead].forEach((x) => { x.disabled = !ui.bgImage; });
+      bgName.textContent = ui.bgImage ? (ui.bgImageName || 'Photo chosen') : 'No photo';
+      const u = ui.bgImage ? await window.crucible.backgroundUrl(ui.bgImage).catch(() => null) : null;
+      bgThumb.style.backgroundImage = u ? `url("${u.replace(/["\\\n]/g, '')}")` : '';
+      bgThumb.classList.toggle('empty', !u);
+      App.applyBackground(ui);
+    };
+    const bgChoose = el('button', {
+      class: 'small', onclick: async () => {
+        try {
+          const r = await window.crucible.chooseBackground();
+          if (!r) return;
+          ui.bgImage = r.ref; ui.bgImageName = r.name;
+          if (ui.bgOpacity == null) ui.bgOpacity = 25;
+          bgShow();
+        } catch (e) { toast(e.message, true, 6000); }
+      },
+    }, 'Choose photo…');
+    bgRemove.onclick = () => { ui.bgImage = ''; ui.bgImageName = ''; bgShow(); };
+    bgOp.addEventListener('input', () => { ui.bgOpacity = +bgOp.value; bgShow(); });
+    bgRead.addEventListener('change', () => { ui.bgRead = bgRead.checked; bgShow(); });
+    bgShow();
 
     const save = async () => {
       await persistSettings({ providers: draft, activeProviderId: activeId, ui, memoryLimit });
@@ -250,6 +285,7 @@ const Settings = {
     const modal = openModal({
       title: 'Settings',
       wide: true,
+      onClose: () => App.applyUi(), // closing without Save undoes any live preview
       body: el('div', {},
         el('h3', { style: 'margin:4px 0 8px;font-family:var(--serif);font-weight:500' }, 'AI providers'),
         el('p', { class: 'muted', style: 'margin-top:0' }, 'Add as many as you like and switch between them from the AI dropdown in the top bar.'),
@@ -257,6 +293,15 @@ const Settings = {
         presetSel,
         el('h3', { style: 'margin:22px 0 8px;font-family:var(--serif);font-weight:500' }, 'Writing'),
         el('div', { class: 'field' }, el('label', {}, 'Editor text size (px)'), fontSize),
+        el('div', { class: 'field' }, el('label', {}, 'Coloured passages'),
+          el('div', {}, el('label', { class: 'check' }, hlBox, 'Highlight passages that have something attached'),
+            el('div', { class: 'hint' }, el('span', { class: 'hl-key hl-img' }, 'picture'), ' ', el('span', { class: 'hl-key hl-note' }, 'margin note'), ' ', el('span', { class: 'hl-key hl-song' }, 'song'), ' Click a coloured passage, and the status bar shows what\'s attached.'))),
+        el('div', { class: 'field' }, el('label', {}, 'Background photo'),
+          el('div', {},
+            el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, bgThumb, bgChoose, bgRemove, bgName),
+            el('div', { style: 'display:flex;gap:10px;align-items:center;margin-top:8px' }, el('span', { class: 'muted', style: 'font-size:12px' }, 'Opacity'), bgOp, bgOpVal),
+            el('label', { class: 'check', style: 'font-size:12px;margin-top:6px' }, bgRead, 'Also behind the Read / Split preview'),
+            el('div', { class: 'hint' }, 'A photo behind the typing area, faded so your text stays readable. Low opacity (10–30%) works best. Changes show straight away; Save keeps them.'))),
         el('h3', { style: 'margin:22px 0 8px;font-family:var(--serif);font-weight:500' }, 'AI context'),
         el('div', { class: 'field' }, el('label', {}, 'Story memory limit'),
           el('div', {}, el('div', { style: 'display:flex;align-items:center;gap:8px' }, memInput, el('span', { class: 'muted' }, 'characters')), memPresets),
