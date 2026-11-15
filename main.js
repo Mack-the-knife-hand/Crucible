@@ -407,7 +407,9 @@ async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
 async function ttsError(r) {
   let j = await r.json().catch(() => ({}));
   if (Array.isArray(j)) j = j[0] || {}; // some Google endpoints wrap the error in a list
-  return new Error(j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`);
+  const e = new Error(j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`);
+  e.status = r.status;
+  return e;
 }
 async function callTTS({ providerId, text, voice, style }) {
   const p = await voiceProvider(providerId);
@@ -433,12 +435,15 @@ async function listTTSVoices({ providerId }) {
   const T = AudioScript.TTS;
   const key = decryptKey(p.apiKey);
   const out = [];
-  for (const kind of p.type === 'gemini-tts' ? ['prompted', 'prebuilt'] : ['']) {
+  for (const kind of p.type === 'gemini-tts' ? ['replicated', 'prompted', 'prebuilt'] : ['']) {
     const q = T.voicesRequest(p, kind);
     const r = await ttsFetch(q.url, q.keyHeader, key, null, p.timeoutSec);
-    if (!r.ok) { if (out.length) break; throw await ttsError(r); }
-    out.push(...T.parseVoices(p, await r.json()));
+    // Your own (cloned and designed) voices first; a filter the service
+    // doesn't know is skipped rather than failing the whole list.
+    if (!r.ok) { const e = await ttsError(r); if (e.status === 401 || e.status === 403) throw e; out.err = out.err || e; continue; }
+    for (const v of T.parseVoices(p, await r.json())) if (!out.some((o) => o.id === v.id)) out.push(v);
   }
+  if (!out.length && out.err) throw out.err;
   return out;
 }
 // Clip file names are made by Crucible ("<id>.wav"); anything else is refused.

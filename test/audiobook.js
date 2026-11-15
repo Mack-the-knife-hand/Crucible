@@ -68,7 +68,9 @@ const tts = http.createServer((req, res) => {
     if (key !== 'g-test-key') { res.writeHead(401, { 'content-type': 'application/json', ...cors }); return res.end(JSON.stringify({ error: { message: 'API key not valid.' } })); }
     if (req.method === 'GET' && req.url.startsWith('/v1beta/voices')) {
       const prompted = req.url.includes('type=prompted');
+      if (req.url.includes('type=replicated') && !globalThis.replicatedOk) { res.writeHead(400, { 'content-type': 'application/json', ...cors }); return res.end(JSON.stringify({ error: { message: 'Unknown type.' } })); }
       res.writeHead(200, { 'content-type': 'application/json', ...cors });
+      if (req.url.includes('type=replicated')) return res.end(JSON.stringify({ voices: [{ id: 'voice_mack', display_name: 'Mack', type: 'replicated' }] }));
       return res.end(JSON.stringify({ voices: prompted ? [{ id: 'voice_finch', display_name: 'Alistair Finch 1', type: 'prompted' }] : [{ id: 'Kore', display_name: 'Kore', type: 'prebuilt' }] }));
     }
     if (req.method === 'POST' && req.url === '/v1beta/interactions') {
@@ -130,7 +132,7 @@ const LIST = async (parts) => {
   await page.waitForLoadState('load');
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error') { errors.push(m.text()); console.log('CONSOLE ERROR at', JSON.stringify(m.location()), m.text().slice(0, 60)); } });
+  page.on('console', (m) => { if (m.type() === 'error' && !String(m.location()?.url).includes('type=replicated')) { errors.push(m.text()); console.log('CONSOLE ERROR at', JSON.stringify(m.location()), m.text().slice(0, 60)); } });
   const js = (fn, arg) => page.evaluate(fn, arg);
   const shot = (n) => page.screenshot({ path: path.join(OUT, n) });
   const until = async (fn, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await js(fn)) return true; await wait(150); } return false; };
@@ -180,6 +182,10 @@ const LIST = async (parts) => {
     await page.click('.modal button:has-text("Load my voices")');
     await until(() => document.querySelector('#auVoiceList')?.options.length === 3);
     check('Load my voices lists designed and prebuilt voices', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).filter(Boolean).join())) === 'voice_finch,Kore');
+    globalThis.replicatedOk = true;
+    await page.click('.modal button:has-text("Load my voices")');
+    await until(() => document.querySelector('#auVoiceList')?.options.length === 4);
+    check('Cloned (replicated) voices are listed first', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).filter(Boolean).join())) === 'voice_mack,voice_finch,Kore');
     await page.selectOption('#auVoiceList', 'Kore');
     check('Picking from the voice list fills the voice box', (await js(() => document.querySelector('.modal input[placeholder^="Voice name"]').value)) === 'Kore');
     await page.fill('.modal input[placeholder^="Voice name"]', 'voice_finch');

@@ -547,12 +547,15 @@
     const p = await voiceProvider(providerId);
     const T = AudioScript.TTS;
     const out = [];
-    for (const kind of p.type === 'gemini-tts' ? ['prompted', 'prebuilt'] : ['']) {
+    for (const kind of p.type === 'gemini-tts' ? ['replicated', 'prompted', 'prebuilt'] : ['']) {
       const q = T.voicesRequest(p, kind);
       const r = await ttsFetch(q.url, q.keyHeader, p.apiKey || '', null, p.timeoutSec);
-      if (!r.ok) { if (out.length) break; throw await ttsError(r); }
-      out.push(...T.parseVoices(p, await r.json()));
+      // Your own (cloned and designed) voices first; a filter the service
+      // doesn't know is skipped rather than failing the whole list.
+      if (!r.ok) { const e = await ttsError(r); if (e.status === 401 || e.status === 403) throw e; out.err = out.err || e; continue; }
+      for (const v of T.parseVoices(p, await r.json())) if (!out.some((o) => o.id === v.id)) out.push(v);
     }
+    if (!out.length && out.err) throw out.err;
     return out;
   }
 
