@@ -324,10 +324,19 @@ const LIST = async (parts) => {
     await js(() => App.save());
     await wait(400);
     section('Settings');
+    await js(async () => {
+      const cur = await window.crucible.getSettings();
+      await window.crucible.saveSettings({ providers: [...cur.providers.map((p) => ({ ...p })), { id: 'bad', name: 'Gemini TTS copy', type: 'gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-3.8-flash-tts' }], activeProviderId: 'chat1' });
+      Object.assign(S.settings, await window.crucible.getSettings());
+    });
     await page.click('#btnSettings').catch(() => {});
     await wait(400);
     const st = await page.textContent('.modal').catch(() => '');
     check('Settings shows the voice service card', st.includes('Gemini TTS') && st.includes('🎙 Voices'));
+    check('A voice model on a writing card is flagged', st.includes('is a voice model, but this card is set up as a writing AI'));
+    await page.click('.modal button:has-text("Make this a voice service")');
+    await wait(200);
+    check('One click turns it into a voice service', (await page.locator('.modal .au-tag').count()) === 2 && !(await page.textContent('.modal')).includes('is a voice model, but'));
     await page.locator('.prov-card').nth(1).scrollIntoViewIfNeeded().catch(() => {});
     await shot('a6-settings.png');
     await page.keyboard.press('Escape');

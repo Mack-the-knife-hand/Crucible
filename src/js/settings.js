@@ -125,6 +125,18 @@ const Settings = {
         const key = el('input', { type: 'password', class: p.hasKey ? 'key-saved' : '', placeholder: p.hasKey ? '✓ Key saved (hidden for safety). Type here only to replace it.' : 'Paste API key (leave blank for local servers)' });
         key.addEventListener('input', () => (p.newApiKey = key.value));
         const status = el('span', { class: 'muted' });
+        // A speech model set up as a writing AI (e.g. "Google Gemini" renamed
+        // to "Gemini TTS"): offer to turn it into the voice service it is.
+        const misfiled = !isVoice && /tts|text-to-speech/i.test(p.model || '');
+        const fixVoice = misfiled ? el('div', { class: 'hint', style: 'color:var(--bad);margin:2px 0 6px' },
+          `"${p.model}" is a voice model, but this card is set up as a writing AI. `,
+          el('button', { class: 'small accent', onclick: () => {
+            if (p.type !== 'gemini') p.baseUrl = AudioScript.TTS.DEFAULTS['gemini-tts'].baseUrl;
+            p.type = 'gemini-tts';
+            if (activeId === p.id) activeId = draft.find((x) => x !== p && !AudioScript.TTS.isVoice(x))?.id || null;
+            renderList();
+          } }, 'Make this a voice service'),
+          p.hasKey ? ' (then paste your key again and press Test)' : '') : null;
 
         listBox.append(el('div', { class: `prov-card ${p.id === activeId ? 'active' : ''}` },
           el('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:4px' },
@@ -136,6 +148,7 @@ const Settings = {
             status,
             el('button', {
               class: 'small', onclick: async () => {
+                if (misfiled) { status.textContent = '✕ Voice model on a writing card: press "Make this a voice service"'; status.style.color = 'var(--bad)'; return; }
                 status.textContent = 'saving & testing…';
                 await save();
                 if (isVoice) {
@@ -153,6 +166,7 @@ const Settings = {
               },
             }, 'Test'),
             el('button', { class: 'small ghost danger', onclick: () => { draft.splice(i, 1); if (activeId === p.id) activeId = draft.find((x) => !AudioScript.TTS.isVoice(x))?.id || null; renderList(); } }, 'Remove')),
+          fixVoice,
           field('Name', inp('name')),
           field('Connection type', type),
           field('Base URL', inp('baseUrl', { placeholder: 'https://…' }), p.hasKey ? 'Your key is only ever sent to this address. Changing it (or the connection type) clears the saved key, so type the key again.' : ''),
