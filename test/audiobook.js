@@ -68,7 +68,7 @@ const tts = http.createServer((req, res) => {
     if (key !== 'g-test-key') { res.writeHead(401, { 'content-type': 'application/json', ...cors }); return res.end(JSON.stringify({ error: { message: 'API key not valid.' } })); }
     if (req.method === 'GET' && req.url.startsWith('/v1beta/voices')) {
       const prompted = req.url.includes('type=prompted');
-      if (req.url.includes('type=replicated') && !globalThis.replicatedOk) { res.writeHead(400, { 'content-type': 'application/json', ...cors }); return res.end(JSON.stringify({ error: { message: 'Unknown type.' } })); }
+      if (req.url.includes('type=replicated') && !globalThis.replicatedOk) { res.writeHead(403, { 'content-type': 'application/json', ...cors }); return res.end(JSON.stringify({ error: { message: 'Permission denied on the service.' } })); }
       res.writeHead(200, { 'content-type': 'application/json', ...cors });
       if (req.url.includes('type=replicated')) return res.end(JSON.stringify({ voices: [{ id: 'voice_mack', display_name: 'Mack', type: 'replicated' }] }));
       return res.end(JSON.stringify({ voices: prompted ? [{ id: 'voice_finch', display_name: 'Alistair Finch 1', type: 'prompted' }] : [{ id: 'Kore', display_name: 'Kore', type: 'prebuilt' }] }));
@@ -181,7 +181,7 @@ const LIST = async (parts) => {
     await page.fill('.modal input[placeholder^="Character name"]', 'Alistair Finch');
     await page.click('.modal button:has-text("Load my voices")');
     await until(() => document.querySelector('#auVoiceList')?.options.length === 3);
-    check('Load my voices lists designed and prebuilt voices', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).filter(Boolean).join())) === 'voice_finch,Kore');
+    check('Load my voices still lists voices when cloned voices are refused (403)', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).filter(Boolean).join())) === 'voice_finch,Kore');
     globalThis.replicatedOk = true;
     await page.click('.modal button:has-text("Load my voices")');
     await until(() => document.querySelector('#auVoiceList')?.options.length === 4);

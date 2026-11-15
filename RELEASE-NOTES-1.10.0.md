@@ -1,6 +1,8 @@
 # Crucible 1.10.0 — Audiobook studio
 
 **1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
+**1.10.9:** Fix: if Google refuses the list of cloned voices (accounts without Voice Replication get "Permission denied"), Load my voices and Test skip it and list your other voices instead of failing.
+
 **1.10.8:** Settings spots a voice model (such as gemini-3.8-flash-tts) set up on a writing-AI card, explains the mix-up, and turns it into a voice service with one click.
 
 **1.10.7:** Load my voices also lists voices you cloned from your own recording in Google AI Studio (Voice Replication), first in the list with your designed voices.

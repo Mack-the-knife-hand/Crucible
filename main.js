@@ -440,7 +440,7 @@ async function listTTSVoices({ providerId }) {
     const r = await ttsFetch(q.url, q.keyHeader, key, null, p.timeoutSec);
     // Your own (cloned and designed) voices first; a filter the service
     // doesn't know is skipped rather than failing the whole list.
-    if (!r.ok) { const e = await ttsError(r); if (e.status === 401 || e.status === 403) throw e; out.err = out.err || e; continue; }
+    if (!r.ok) { const e = await ttsError(r); out.err = out.err || e; continue; }
     for (const v of T.parseVoices(p, await r.json())) if (!out.some((o) => o.id === v.id)) out.push(v);
   }
   if (!out.length && out.err) throw out.err;
