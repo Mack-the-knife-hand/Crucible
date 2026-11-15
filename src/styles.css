@@ -601,6 +601,7 @@ input[type="range"] { accent-color: var(--ember); padding: 0; border: 0; backgro
 .au-clip .au-dot { margin-top: 4px; }
 .au-ctext { flex: 1; min-width: 0; cursor: pointer; line-height: 1.4; }
 .au-ctext:hover { color: var(--ember-2); }
+.au-err { color: var(--bad); font-size: 11.5px; margin-top: 3px; line-height: 1.35; }
 .au-cbtn { display: flex; gap: 2px; flex: none; }
 .au-cbtn button { padding: 2px 6px; }
 .au-clip.st-stale .au-ctext .muted, .au-clip.st-error .au-ctext .muted { color: var(--bad); }

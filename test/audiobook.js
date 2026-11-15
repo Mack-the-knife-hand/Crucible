@@ -192,6 +192,9 @@ const LIST = async (parts) => {
     const cast = await js(() => Audiobook.data().actors.map((a) => `${a.name}:${a.narrator ? 'N' : ''}:${a.engine}:${a.voice}`));
     check('Three actors, one narrator', cast.join('|') === 'Narrator:N:tts:Kore|Alistair Finch::tts:voice_finch|Me::mic:', cast.join('|'));
 
+    section('Actor whose voice service was removed and added again');
+    await js(() => { Audiobook.data().actors[0].providerId = 'gone'; Audiobook.render(); });
+    check('Cast list warns', (await page.textContent('#auActors')).includes('no voice service'));
     section('Pronunciation list');
     await js(() => { Audiobook.data().lexicon = [{ from: 'Duw', to: 'Dee-oo', matchCase: true }, { from: 'bach', to: 'bahkh' }]; Audiobook.render(); });
     check('Count shown', (await page.textContent('#auLexCount')) === '2');
@@ -206,6 +209,7 @@ const LIST = async (parts) => {
     await page.click('#auVoice');
     await until(() => !Audiobook.busy && Audiobook.data().clips.every((c) => c.status === 'ok'));
     const clips = await js(() => Audiobook.data().clips.map((c) => ({ who: Audiobook.actor(c.actorId).name, text: c.text, st: c.status, file: c.file, dur: c.dur })));
+    check('Narrator re-attached to the only voice service', (await js(() => Audiobook.data().actors[0].providerId)) === 'g1');
     check('Three clips made', clips.length === 3 && clips.every((c) => c.st === 'ok'), JSON.stringify(clips.map((c) => c.st)));
     check('Quotes to Finch, the rest to the Narrator', clips.map((c) => c.who).join() === 'Alistair Finch,Narrator,Alistair Finch');
     check('Voices sent the right IDs', ttsCalls.map((c) => c.voice).join() === 'voice_finch,Kore,voice_finch');

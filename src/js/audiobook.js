@@ -148,7 +148,8 @@ const Audiobook = {
       el('span', { class: 'au-dot', style: `background:${x?.color || '#888'}`, title: x?.name || 'Unknown actor' }),
       el('div', { class: 'au-ctext', title: c.error || 'Show in manuscript', onclick: () => Editor.reveal(c.start, c.end) },
         el('span', { class: 'muted small' }, `${x?.name || '?'}${label ? ' · ' + label : ''}${c.dur ? ' · ' + (c.dur < 60 ? `${c.dur.toFixed(1)}s` : AudioScript.clock(c.dur)) : ''}`), el('br'),
-        snippet(c.text, 90)),
+        snippet(c.text, 90),
+        st === 'error' && c.error ? el('div', { class: 'au-err' }, c.error) : null),
       el('div', { class: 'au-cbtn' },
         el('button', { class: 'small ghost', title: 'Play', disabled: !c.file, onclick: () => this.play(c) }, '▶'),
         el('button', { class: 'small ghost', title: x?.engine === 'mic' ? 'Record again' : 'Generate again', onclick: () => this.regenerate([c]) }, '↻'),
@@ -335,6 +336,14 @@ const Audiobook = {
   async synthesize(c) {
     const x = this.actor(c.actorId);
     if (!x) throw new Error('This clip\'s actor was deleted. Use ⇄ to give it to someone.');
+    // An actor made before the voice service was added (or after it was
+    // removed and added again) points at nothing: with just one voice
+    // service, that's obviously the one to use.
+    if (!this.voiceProviders().some((p) => p.id === x.providerId)) {
+      const vp = this.voiceProviders();
+      if (vp.length === 1) { x.providerId = vp[0].id; markDirty(true); this.renderActors(); }
+      else throw new Error(vp.length ? `Choose a voice service for ${x.name}: press ✎ next to ${x.name} in the Cast list.` : 'Add a voice service in Settings first (+ Add an AI or voice service…).');
+    }
     const text = AudioScript.spoken(Editor.text.slice(c.start, c.end), this.data().lexicon);
     if (!text) throw new Error('Nothing to say in this clip.');
     // Busy or rate-limited services usually answer on a second try.
