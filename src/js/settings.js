@@ -17,7 +17,6 @@ const Settings = {
   AUTHOR: 'Mack',
   authorNote() {
     return el('div', { class: 'about-note' },
-      el('p', {}, 'I made Crucible because I love you, and because I think your ideas are good.'),
       el('p', {}, 'Your stories deserve to be written, finished and read. Crucible is free, and it will stay free: no paywalls, no subscriptions, no limits on what you can create. Everything you write with it belongs to you.'),
       el('p', {}, 'So write the thing you\'ve been carrying around. Put your stories out there for the world to enjoy.'),
       el('p', { class: 'about-sign' }, `— ${this.AUTHOR}`));

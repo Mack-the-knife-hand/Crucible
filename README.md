@@ -33,11 +33,11 @@ For the complete source, choose **Code > Download ZIP**. Extract it before openi
 
 Keep each `.md` manuscript together with its matching `.crucible` folder and referenced images/media. Browser folder settings live in `crucible-settings.json`; that file may contain unencrypted API keys. Do not upload your working folder to this repository.
 
-To update, save and close the app, back up your working folder, and replace only `crucible.html`. Preserve settings, books and companion files. The author's About statement is unchanged.
+To update, save and close the app, back up your working folder, and replace only `crucible.html`. Preserve settings, books and companion files. 
 
-## Version 1.10.0
+## Version 1.11.0
 
-Version 1.10.0 adds the Audiobook studio (the Audio tab). See [release notes](RELEASE-NOTES-1.10.0.md).
+Version 1.11.0 adds an opening splash screen and rolls up the Audiobook studio (the Audio tab) with its fixes: record narration yourself with keyboard controls (Space, Enter, P), a full voice dropdown including cloned and library voices, and clearer voice-service checks. See [release notes](RELEASE-NOTES-1.11.0.md), the [Audiobook studio notes](RELEASE-NOTES-1.10.0.md) and the [work instructions](docs/Crucible-1.11.0-Work-Instructions.pdf).
 
 ## Version 1.9.8
 

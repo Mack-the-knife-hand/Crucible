@@ -31,6 +31,7 @@ html = html.replace(/(src|href)="(img\/[^"]+\.png)"/g, (_m, a, f) =>
 // Larger copy for the welcome screen and About (read by App.logo(); it sits
 // first in <body> so it's there before any script runs).
 html = html.replace('<body>', () => `<body>\n<template id="appLogo">data:image/png;base64,${fs.readFileSync(path.join(SRC, 'img/icon-128.png')).toString('base64')}</template>`);
+html = html.replace('<body>', () => `<body>\n<template id="splashLogo">data:image/webp;base64,${fs.readFileSync(path.join(SRC, 'img/splash.webp')).toString('base64')}</template>`);
 
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_m, f) =>
   `<style>\n${fs.readFileSync(path.join(SRC, f), 'utf8')}\n</style>`);

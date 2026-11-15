@@ -390,6 +390,23 @@ const LIST = async (parts) => {
     await page.locator('.prov-card').nth(1).scrollIntoViewIfNeeded().catch(() => {});
     await shot('a6-settings.png');
     await page.keyboard.press('Escape');
+    section('Splash screen');
+    check('No splash under test automation', await js(() => !document.getElementById('splash')));
+    const textBefore = await js(() => Editor.text);
+    await js(() => { Editor.ta.focus(); location.hash = 'splash'; App.splash(); });
+    await wait(700);
+    check('Splash shows the logo and name', await js(() => !!document.querySelector('#splash .splash-logo') && document.querySelector('#splash').textContent.includes('Crucible')));
+    await shot('a7-splash.png');
+    await page.keyboard.press('x');
+    await wait(500);
+    check('Any key ends the splash early', await js(() => !document.getElementById('splash')));
+    check('That key doesn\'t land in the book', (await js(() => Editor.text)) === textBefore);
+    await js(() => App.splash());
+    await wait(4500);
+    const still = await js(() => !!document.getElementById('splash'));
+    await wait(1200);
+    check('Splash closes on its own after 5 seconds', still && (await js(() => !document.getElementById('splash'))));
+    await js(() => { history.replaceState(null, '', location.pathname + location.search); });
     section('Errors');
     check('No page errors', errors.length === 0, errors.join(' | '));
   } catch (e) {

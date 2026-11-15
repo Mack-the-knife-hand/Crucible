@@ -635,3 +635,14 @@ table.au-lex input[type="text"], table.au-lex input:not([type]) { width: 100%; }
 
 /* A stored API key: the box is empty on purpose, so say so clearly. */
 input.key-saved::placeholder { color: var(--ok); opacity: 1; }
+
+/* Opening splash */
+#splash { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #2a1d17 0%, #141012 70%); color: #f3e9df; opacity: 1; transition: opacity .35s ease; cursor: pointer; }
+#splash.out { opacity: 0; pointer-events: none; }
+.splash-inner { text-align: center; animation: splash-in .6s ease both; }
+.splash-logo { width: 196px; height: 196px; display: block; margin: 0 auto 18px; filter: drop-shadow(0 6px 28px rgba(232, 116, 59, .45)); }
+.splash-title { font-family: var(--serif); font-size: 46px; letter-spacing: .04em; }
+.splash-tag { font-family: var(--serif); font-style: italic; font-size: 17px; opacity: .8; margin-top: 6px; }
+.splash-ver { font-size: 12px; opacity: .5; margin-top: 18px; min-height: 1em; }
+.splash-hint { font-size: 12px; opacity: .45; margin-top: 6px; letter-spacing: .08em; text-transform: uppercase; }
+@keyframes splash-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }

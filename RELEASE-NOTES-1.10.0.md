@@ -1,29 +1,5 @@
 # Crucible 1.10.0 — Audiobook studio
 
-**1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
-**1.10.12:** The recorder keeps a take you recorded but didn't press Keep on when you press Finish (before, that line stayed "waiting" and playback skipped it). Play from cursor now says when it skips lines that have no audio yet.
-
-**1.10.11:** A selection with no quotation marks now goes entirely to the actor you chose (so "Me (microphone)" opens the recorder for narration too, instead of handing it to the Narrator). The recorder works from the keyboard: Space starts and stops a take, Enter keeps it and moves on, P plays it back.
-
-**1.10.10:** Fix: voices from Google's extended voice library (names like ar-eg-storyteller-10) were wrongly refused as "not a Gemini voice name". Only names with spaces (such as a character name typed into the Voice box) are refused now.
-
-**1.10.9:** Fix: if Google refuses the list of cloned voices (accounts without Voice Replication get "Permission denied"), Load my voices and Test skip it and list your other voices instead of failing.
-
-**1.10.8:** Settings spots a voice model (such as gemini-3.8-flash-tts) set up on a writing-AI card, explains the mix-up, and turns it into a voice service with one click.
-
-**1.10.7:** Load my voices also lists voices you cloned from your own recording in Google AI Studio (Voice Replication), first in the list with your designed voices.
-
-**1.10.6:** An actor whose Voice box is empty or holds something that isn't a voice name (e.g. a character name) is now stopped with a clear message instead of being sent; the service otherwise picks a different voice for every line. The Cast list flags such actors with ⚠.
-
-**1.10.5:** After "Load my voices", the actor editor shows a real dropdown of every voice (picking one fills in the Voice box); the empty voice-service message now says exactly where to add one.
-
-
-**1.10.3:** a saved API key now says so in green ("✓ Key saved") instead of looking like an empty box.
-
-**1.10.2:** failed clips show their error in the list; an actor left without a voice service uses your only one automatically.
-
-**1.10.1:** voice-service errors now say exactly why a request failed (the browser's own reason, or Google's message), and a key pasted with a stray character is caught with a clear message.
-
 A new **Audio** tab in the right panel turns your manuscript into an audiobook.
 
 ## Cast
@@ -66,3 +42,17 @@ A new **Audio** tab in the right panel turns your manuscript into an audiobook.
 - `test/audio-unit.js` covers segmenting, pronunciation, pauses, chapters, the limiter, WAV writing and the voice-service requests. It runs as part of `npm run test:unit`.
 - `test/audiobook.js` is a browser end-to-end test with a fake Gemini TTS server and a simulated microphone. It covers cast, voicing, out-of-date clips, recording, saving, and MP3/WAV export with level checks.
 - `test/smoke.js` adds desktop checks: voice calls through the main process, key handling, clip and export files, and microphone-only permission.
+
+## Fixes and refinements (1.10.1 – 1.10.12)
+- **1.10.1:** voice-service errors now say exactly why a request failed (the browser's own reason, or Google's message), and a key pasted with a stray character is caught with a clear message.
+- **1.10.2:** failed clips show their error in the list; an actor left without a voice service uses your only one automatically.
+- **1.10.3:** a saved API key now says so in green ("✓ Key saved") instead of looking like an empty box.
+- **1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
+- **1.10.5:** After "Load my voices", the actor editor shows a real dropdown of every voice (picking one fills in the Voice box); the empty voice-service message now says exactly where to add one.
+- **1.10.6:** An actor whose Voice box is empty or holds something that isn't a voice name (e.g. a character name) is now stopped with a clear message instead of being sent; the service otherwise picks a different voice for every line. The Cast list flags such actors with ⚠.
+- **1.10.7:** Load my voices also lists voices you cloned from your own recording in Google AI Studio (Voice Replication), first in the list with your designed voices.
+- **1.10.8:** Settings spots a voice model (such as gemini-3.8-flash-tts) set up on a writing-AI card, explains the mix-up, and turns it into a voice service with one click.
+- **1.10.9:** Fix: if Google refuses the list of cloned voices (accounts without Voice Replication get "Permission denied"), Load my voices and Test skip it and list your other voices instead of failing.
+- **1.10.10:** Fix: voices from Google's extended voice library (names like ar-eg-storyteller-10) were wrongly refused as "not a Gemini voice name". Only names with spaces (such as a character name typed into the Voice box) are refused now.
+- **1.10.11:** A selection with no quotation marks now goes entirely to the actor you chose (so "Me (microphone)" opens the recorder for narration too, instead of handing it to the Narrator). The recorder works from the keyboard: Space starts and stops a take, Enter keeps it and moves on, P plays it back.
+- **1.10.12:** The recorder keeps a take you recorded but didn't press Keep on when you press Finish (before, that line stayed "waiting" and playback skipped it). Play from cursor now says when it skips lines that have no audio yet.
