@@ -285,6 +285,33 @@ const LIST = async (parts) => {
     const mine = await js((args) => Audiobook.data().clips.filter((c) => c.actorId === args[0] && Editor.text.slice(c.start, c.end).includes(args[1])).map((c) => c.status), [meId, nline]);
     check('Space stops, Enter keeps the take', mine.length === 1 && mine[0] === 'ok', JSON.stringify(mine));
     if (await page.isVisible('.rec-modal')) await page.click('.modal footer button:has-text("Finish")');
+    await wait(300);
+    const before = await js((t) => Audiobook.data().clips.find((c) => Editor.text.slice(c.start, c.end).includes(t)).file, nline);
+    await js((t) => { const a = Editor.text.indexOf(t); Editor.ta.focus(); Editor.ta.setSelectionRange(a, a + t.length); Audiobook.renderSelection(); }, nline);
+    await page.click('#auVoice');
+    await wait(300);
+    if (await page.isVisible('.modal footer button:has-text("Replace")')) await page.click('.modal footer button:has-text("Replace")');
+    await page.waitForSelector('.rec-modal');
+    await page.keyboard.press(' ');
+    await wait(900);
+    await page.keyboard.press(' ');
+    await page.waitForSelector('.rec-btns button:has-text("Keep"):not([disabled])');
+    await page.click('.modal footer button:has-text("Finish")');
+    await wait(700);
+    const after = await js((t) => Audiobook.data().clips.filter((c) => Editor.text.slice(c.start, c.end).includes(t)).map((c) => [c.status, c.file]), nline);
+    check('Finish keeps a take you recorded but didn\'t press Keep on', after.length === 1 && after[0][0] === 'ok' && after[0][1] && after[0][1] !== before, JSON.stringify(after));
+    const heard = await js(async () => {
+      const log = [];
+      const orig = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () { this.addEventListener('ended', () => log.push('ended')); return orig.call(this); };
+      const a = Editor.text.indexOf('Judy locked');
+      Editor.ta.setSelectionRange(a, a);
+      await Audiobook.playFrom();
+      await new Promise((r) => setTimeout(r, 100));
+      HTMLMediaElement.prototype.play = orig;
+      return log;
+    });
+    check('Play from cursor plays your recorded line to the end', heard.length === 1 && heard[0] === 'ended', JSON.stringify(heard));
 
     section('Save keeps the cast and clips');
     await js(() => App.save());

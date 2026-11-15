@@ -462,8 +462,11 @@ const Audiobook = {
     const pos = Editor.selection().start;
     const ch = this.chapterAtCaret();
     const o = this.data().opts;
-    const list = this.data().clips.filter((c) => !c.missing && c.status === 'ok' && c.end > pos && c.start < ch.end).sort((x, y) => x.start - y.start);
-    if (!list.length) return toast('No finished clips from here to the end of the chapter.');
+    const span = this.data().clips.filter((c) => !c.missing && c.end > pos && c.start < ch.end);
+    const list = span.filter((c) => c.status === 'ok').sort((x, y) => x.start - y.start);
+    const silent = span.length - list.length;
+    if (!list.length) return toast(silent ? `${silent} line${silent === 1 ? ' has' : 's have'} no audio yet (still waiting to be recorded or voiced).` : 'No finished clips from here to the end of the chapter.', !!silent, 6000);
+    if (silent) toast(`Skipping ${silent} line${silent === 1 ? '' : 's'} with no audio yet (shown as "waiting" or "failed" in the clip list).`, true, 6000);
     this.stopPlay();
     this.playing = true;
     $('#auStop').classList.remove('hidden');
@@ -765,7 +768,7 @@ const Recorder = {
     const an = ctx.createAnalyser();
     an.fftSize = 1024;
     ctx.createMediaStreamSource(stream).connect(an);
-    let i = 0, rec = null, chunks = [], take = null, raf = 0;
+    let i = 0, rec = null, chunks = [], take = null, raf = 0, takeReady = Promise.resolve();
     const who = el('div', { class: 'muted' });
     const line = el('div', { class: 'rec-line' });
     const meter = el('div', { class: 'rec-meter' }, el('div', { class: 'rec-level' }));
@@ -800,22 +803,29 @@ const Recorder = {
       chunks = [];
       rec = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
       rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-      rec.onstop = async () => {
+      rec.onstop = () => { takeReady = (async () => {
         take = new Uint8Array(await new Blob(chunks, { type: mime || 'audio/webm' }).arrayBuffer());
         btnRec.textContent = '● Record again';
         btnPlay.disabled = false; btnKeep.disabled = false;
         status.textContent = 'Play it back. Keep it, or record again.';
-      };
+      })(); };
       rec.start();
       btnRec.textContent = '■ Stop (Space)';
       status.textContent = 'Recording…';
     };
     btnPlay.onclick = () => take && Audiobook.playBytes(take, ext);
+    // Save the current take to its clip; false if there was nothing to keep.
+    const keepTake = async () => {
+      if (!take || !clips[i]) return false;
+      const t = take; take = null;
+      await Audiobook.storeClip(clips[i], t, ext);
+      Audiobook.renderClips();
+      return true;
+    };
     btnKeep.onclick = async () => {
       if (!take) return;
       btnKeep.disabled = true;
-      try { await Audiobook.storeClip(clips[i], take, ext); } catch (e) { status.textContent = `✕ ${e.message}`; btnKeep.disabled = false; return; }
-      Audiobook.renderClips();
+      try { await keepTake(); } catch (e) { status.textContent = `✕ ${e.message}`; btnKeep.disabled = false; return; }
       i++; btnRec.textContent = '● Record'; show();
     };
     btnSkip.onclick = () => { i++; btnRec.textContent = '● Record'; show(); };
@@ -831,7 +841,12 @@ const Recorder = {
     };
     document.addEventListener('keydown', keys, true);
     let m;
-    const done = () => {
+    // Finishing (or closing) with a take that was recorded but not yet kept
+    // keeps it: a take you've heard back is one you meant to use.
+    const done = async () => {
+      if (rec && rec.state === 'recording') { await new Promise((r) => { rec.addEventListener('stop', r, { once: true }); rec.stop(); }); }
+      await takeReady;
+      await keepTake().catch((e) => toast(`Couldn't keep the last take: ${e.message}`, true, 6000));
       document.removeEventListener('keydown', keys, true);
       cancelAnimationFrame(raf);
       try { if (rec && rec.state === 'recording') rec.stop(); } catch { /* stopped */ }
@@ -844,8 +859,8 @@ const Recorder = {
     m = openModal({
       title: 'Record your lines', cls: 'rec-modal',
       body: el('div', {}, who, line, meter, el('div', { class: 'rec-btns' }, btnRec, btnPlay, btnKeep, btnSkip), status),
-      buttons: [{ label: 'Finish', onClick: () => { done(); } }],
-      onClose: () => { document.removeEventListener('keydown', keys, true); cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close().catch(() => {}); },
+      buttons: [{ label: 'Finish', onClick: async () => { await done(); } }],
+      onClose: () => { keepTake().catch(() => {}); document.removeEventListener('keydown', keys, true); cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close().catch(() => {}); },
     });
     show();
   },

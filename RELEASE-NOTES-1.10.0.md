@@ -1,6 +1,8 @@
 # Crucible 1.10.0 — Audiobook studio
 
 **1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
+**1.10.12:** The recorder keeps a take you recorded but didn't press Keep on when you press Finish (before, that line stayed "waiting" and playback skipped it). Play from cursor now says when it skips lines that have no audio yet.
+
 **1.10.11:** A selection with no quotation marks now goes entirely to the actor you chose (so "Me (microphone)" opens the recorder for narration too, instead of handing it to the Narrator). The recorder works from the keyboard: Space starts and stops a take, Enter keeps it and moves on, P plays it back.
 
 **1.10.10:** Fix: voices from Google's extended voice library (names like ar-eg-storyteller-10) were wrongly refused as "not a Gemini voice name". Only names with spaces (such as a character name typed into the Voice box) are refused now.
