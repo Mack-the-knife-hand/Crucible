@@ -1,5 +1,7 @@
 # Crucible 1.10.0 — Audiobook studio
 
+**1.10.1:** voice-service errors now say exactly why a request failed (the browser's own reason, or Google's message), and a key pasted with a stray character is caught with a clear message.
+
 A new **Audio** tab in the right panel turns your manuscript into an audiobook.
 
 ## Cast

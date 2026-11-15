@@ -389,6 +389,8 @@ async function voiceProvider(providerId) {
   return p;
 }
 async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
+  key = String(key || '').trim();
+  if (/[^\x21-\x7e]/.test(key)) throw new Error("The saved API key contains a space or a character that can't be sent. In Settings, paste the key again.");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), (Number(timeoutSec) || 120) * 1000);
   try {
@@ -403,7 +405,8 @@ async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
   } finally { clearTimeout(timer); }
 }
 async function ttsError(r) {
-  const j = await r.json().catch(() => ({}));
+  let j = await r.json().catch(() => ({}));
+  if (Array.isArray(j)) j = j[0] || {}; // some Google endpoints wrap the error in a list
   return new Error(j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`);
 }
 async function callTTS({ providerId, text, voice, style }) {

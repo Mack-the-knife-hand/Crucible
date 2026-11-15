@@ -492,6 +492,9 @@
   }
 
   async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
+    key = String(key || '').trim();
+    // A key pasted with an invisible or fancy character can't go in a request header.
+    if (/[^\x21-\x7e]/.test(key)) throw new Error('The saved API key contains a space or a character that can\'t be sent. In Settings, paste the key again (copy it straight from Google AI Studio or ElevenLabs).');
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), (Number(timeoutSec) || 120) * 1000);
     let r;
@@ -505,13 +508,15 @@
     } catch (e) {
       clearTimeout(timer);
       if (e.name === 'AbortError') throw new Error('The voice service didn\'t answer in time.');
-      throw new Error(`Couldn't reach ${new URL(url).host}. Check your connection and the voice provider's Base URL in Settings.`);
+      // Say what the browser said: blocked by a network filter, an extension, offline, a redirect…
+      throw new Error(`Couldn't reach ${new URL(url).host} (${e.message || e.name}). Check your connection, any network filter or browser extension that blocks sites, and the voice provider's Base URL in Settings.`);
     }
     clearTimeout(timer);
     return r;
   }
   const ttsError = async (r) => {
-    const j = await r.json().catch(() => ({}));
+    let j = await r.json().catch(() => ({}));
+    if (Array.isArray(j)) j = j[0] || {}; // some Google endpoints wrap the error in a list
     const m = j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`;
     const e = new Error(m);
     e.status = r.status;
