@@ -632,3 +632,6 @@ table.au-lex input[type="text"], table.au-lex input:not([type]) { width: 100%; }
 #right .tabs { min-width: 0; }
 #right .tabs button { padding-left: 8px; padding-right: 8px; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
 #right .tabs .collapse-btn { flex: none; }
+
+/* A stored API key: the box is empty on purpose, so say so clearly. */
+input.key-saved::placeholder { color: var(--ok); opacity: 1; }

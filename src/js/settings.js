@@ -118,7 +118,7 @@ const Settings = {
           .forEach(([v, t]) => type.append(el('option', { value: v }, t)));
         type.value = p.type;
         type.onchange = () => (p.type = type.value);
-        const key = el('input', { type: 'password', placeholder: p.hasKey ? '•••••••• stored — type to replace' : 'Paste API key (leave blank for local servers)' });
+        const key = el('input', { type: 'password', class: p.hasKey ? 'key-saved' : '', placeholder: p.hasKey ? '✓ Key saved (hidden for safety). Type here only to replace it.' : 'Paste API key (leave blank for local servers)' });
         key.addEventListener('input', () => (p.newApiKey = key.value));
         const status = el('span', { class: 'muted' });
 

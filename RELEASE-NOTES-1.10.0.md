@@ -1,5 +1,7 @@
 # Crucible 1.10.0 — Audiobook studio
 
+**1.10.3:** a saved API key now says so in green ("✓ Key saved") instead of looking like an empty box.
+
 **1.10.2:** failed clips show their error in the list; an actor left without a voice service uses your only one automatically.
 
 **1.10.1:** voice-service errors now say exactly why a request failed (the browser's own reason, or Google's message), and a key pasted with a stray character is caught with a clear message.
