@@ -397,6 +397,7 @@
     const s = await loadSettings();
     const p = s.providers.find((x) => x.id === (providerId || s.activeProviderId));
     if (!p) throw new Error('No AI provider selected. Add one in Settings.');
+    if (AudioScript.TTS.isVoice(p)) throw new Error(`"${p.name}" is a voice service for the audiobook, not a writing AI. Choose another AI.`);
     const key = p.apiKey || '';
     const images = [];
     for (const f of imageFiles || []) {
@@ -471,6 +472,83 @@
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  // ------------------------------------------------------ voices (TTS) --
+  const abFiles = new Map(); // audiobook files being written: token -> { w | parts }
+  // Clip file names are made by Crucible ("<id>.wav"); anything else is refused.
+  const audioName = (n) => {
+    const s = String(n || '');
+    if (!/^[\w-]{1,64}\.(wav|mp3|webm|ogg|m4a)$/.test(s)) throw new Error('Bad audio file name.');
+    return s;
+  };
+
+  async function voiceProvider(providerId) {
+    const s = await loadSettings();
+    const p = s.providers.find((x) => x.id === providerId);
+    if (!p) throw new Error('This actor\'s voice service was removed. Choose another in the actor settings.');
+    if (!AudioScript.TTS.isVoice(p)) throw new Error(`"${p.name}" is a writing AI, not a voice service.`);
+    return p;
+  }
+
+  async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), (Number(timeoutSec) || 120) * 1000);
+    let r;
+    try {
+      // Never follow redirects with the key (see callAI).
+      r = await fetch(url, {
+        method: body ? 'POST' : 'GET', signal: ctl.signal, redirect: 'error',
+        headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(key ? { [keyHeader]: key } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      if (e.name === 'AbortError') throw new Error('The voice service didn\'t answer in time.');
+      throw new Error(`Couldn't reach ${new URL(url).host}. Check your connection and the voice provider's Base URL in Settings.`);
+    }
+    clearTimeout(timer);
+    return r;
+  }
+  const ttsError = async (r) => {
+    const j = await r.json().catch(() => ({}));
+    const m = j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`;
+    const e = new Error(m);
+    e.status = r.status;
+    return e;
+  };
+
+  async function callTTS({ providerId, text, voice, style }) {
+    const p = await voiceProvider(providerId);
+    const T = AudioScript.TTS;
+    let req = T.request(p, { text, voice, style });
+    let r = await ttsFetch(req.url, req.keyHeader, p.apiKey || '', req.body, p.timeoutSec);
+    // An older model without the Interactions API: try the classic call once.
+    if (!r.ok && r.status === 404 && p.type === 'gemini-tts' && /interactions$/.test(req.url) && !/^voice/.test(voice || '')) {
+      req = T.request(p, { text, voice, style }, { legacy: true });
+      r = await ttsFetch(req.url, req.keyHeader, p.apiKey || '', req.body, p.timeoutSec);
+    }
+    if (!r.ok) throw await ttsError(r);
+    const ct = r.headers.get('content-type') || '';
+    if (/json/i.test(ct)) {
+      const hit = T.findAudio(await r.json());
+      if (!hit) throw new Error('The voice service answered without any audio.');
+      return T.finish(Uint8Array.from(atob(hit.b64), (c) => c.charCodeAt(0)), hit.mime);
+    }
+    return T.finish(new Uint8Array(await r.arrayBuffer()), ct);
+  }
+
+  async function listTTSVoices({ providerId }) {
+    const p = await voiceProvider(providerId);
+    const T = AudioScript.TTS;
+    const out = [];
+    for (const kind of p.type === 'gemini-tts' ? ['prompted', 'prebuilt'] : ['']) {
+      const q = T.voicesRequest(p, kind);
+      const r = await ttsFetch(q.url, q.keyHeader, p.apiKey || '', null, p.timeoutSec);
+      if (!r.ok) { if (out.length) break; throw await ttsError(r); }
+      out.push(...T.parseVoices(p, await r.json()));
+    }
+    return out;
   }
 
   // ------------------------------------------------------------- export --
@@ -881,7 +959,7 @@
       // Carry story memory, linked pictures and chapter images across.
       if (currentPath && books.has(currentPath)) {
         const from = bookOf(currentPath);
-        for (const sub of ['memory', 'linked']) {
+        for (const sub of ['memory', 'linked', 'audio']) {
           const dir = `${sidecarOf(from.file)}/${sub}`;
           for (const f of await from.root.list(dir)) {
             await root.write(`${sidecarOf(name)}/${sub}/${f}`, await from.root.read(`${dir}/${f}`, true));
@@ -1125,6 +1203,76 @@
     aiChat: async (args) => {
       try { return { ok: true, text: await callAI(args) }; } catch (e) { return { ok: false, error: e.message }; }
     },
+
+    // ------------------------------------------------------ audiobook ----
+    // One line of speech from a voice provider: { ok, ext, data } or { ok:false, error }.
+    tts: async (args) => {
+      try { return { ok: true, ...(await callTTS(args)) }; } catch (e) { return { ok: false, error: e.message }; }
+    },
+    listVoices: async (args) => {
+      try { return { ok: true, voices: await listTTSVoices(args) }; } catch (e) { return { ok: false, error: e.message }; }
+    },
+    // Voice clips live in "<Book>.crucible/audio/".
+    async writeBookAudio({ bookPath, name, data }) {
+      const { root, file } = bookOf(bookPath);
+      await root.write(`${sidecarOf(file)}/audio/${audioName(name)}`, new Blob([data]));
+      return true;
+    },
+    async readBookAudio({ bookPath, name }) {
+      if (!books.has(bookPath)) return null;
+      const { root, file } = bookOf(bookPath);
+      const b = await root.read(`${sidecarOf(file)}/audio/${audioName(name)}`, true);
+      return b ? new Uint8Array(await b.arrayBuffer()) : null;
+    },
+    async deleteBookAudio({ bookPath, name }) {
+      if (!books.has(bookPath)) return;
+      const { root, file } = bookOf(bookPath);
+      await root.remove(`${sidecarOf(file)}/audio/${audioName(name)}`);
+    },
+    async listBookAudio({ bookPath }) {
+      if (!books.has(bookPath)) return [];
+      const { root, file } = bookOf(bookPath);
+      return root.list(`${sidecarOf(file)}/audio`);
+    },
+    // Finished audiobook files go to "<Book> audiobook/" beside the book
+    // (browser storage: downloaded instead). Written a piece at a time so a
+    // long book never has to fit in memory at once.
+    async audiobookBegin({ bookPath, name }) {
+      const { root, file } = bookOf(bookPath);
+      const folder = `${AudioScript.fileSafe(file.replace(/\.[^.]+$/, ''))} audiobook`;
+      const safe = AudioScript.fileSafe(name);
+      const token = idOf();
+      if (root.kind === 'folder') {
+        const { d, name: n } = await root._parent(`${folder}/${safe}`, true);
+        const w = await (await d.getFileHandle(n, { create: true })).createWritable();
+        abFiles.set(token, { w, where: `${folder}/${safe}` });
+      } else abFiles.set(token, { parts: [], name: safe, where: safe });
+      return { token, where: abFiles.get(token).where };
+    },
+    async audiobookWrite({ token, data }) {
+      const x = abFiles.get(token);
+      if (!x) throw new Error('That export was closed.');
+      if (x.w) await x.w.write(data); else x.parts.push(data);
+    },
+    async audiobookEnd({ token }) {
+      const x = abFiles.get(token);
+      abFiles.delete(token);
+      if (!x) return null;
+      if (x.w) { await x.w.close(); return { path: x.where }; }
+      const ext = (x.name.match(/\.(\w+)$/) || [])[1] || 'mp3';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(x.parts, { type: ext === 'wav' ? 'audio/wav' : 'audio/mpeg' }));
+      a.download = x.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      return { path: x.name, downloaded: true };
+    },
+    async audiobookAbort({ token }) {
+      const x = abFiles.get(token);
+      abFiles.delete(token);
+      try { await x?.w?.abort?.(); } catch { /* already closed */ }
+    },
+
     async exportPdf({ html, suggestedName }) {
       await printHtml(html, (suggestedName || 'book.pdf').replace(/\.pdf$/i, ''));
       return { ok: true, printed: true };

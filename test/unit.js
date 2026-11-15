@@ -301,3 +301,4 @@ console.log('Audit honesty test passed');
   assert.strictEqual(C.fixOpenAIBody('Incorrect API key provided', { max_tokens: 1 }), null);
 }
 console.log('OpenAI parameter tests passed');
+require('./audio-unit.js');

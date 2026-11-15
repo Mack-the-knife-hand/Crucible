@@ -1,0 +1,44 @@
+# Crucible 1.10.0 — Audiobook studio
+
+A new **Audio** tab in the right panel turns your manuscript into an audiobook.
+
+## Cast
+- Add actors: each one is a voice from **Gemini TTS** or **ElevenLabs**, or **you**, recording through your microphone.
+- One actor is the **Narrator**.
+- Gemini actors can use a stock voice (Kore, Puck…) or a voice you designed in Google AI Studio (`voice_…`). **Load my voices** lists them.
+- The **Direction** box tells Gemini how the character speaks.
+- **Test voice** reads the selected text, or a test line, before you commit.
+
+## Voicing
+- Select a passage, pick an actor and press **Voice selection**.
+- Words inside quotation marks go to that actor. Everything else ("he said", description) goes to the Narrator.
+- Tick **Whole selection to this actor** for letters, songs or broadcasts.
+- Each piece becomes a clip, saved in `<Book>.crucible/audio/`.
+- Voiced text is underlined in the actor's colour.
+- Change the words later and the underline turns red-dashed. **Redo out-of-date** voices them again.
+- Microphone actors open the recorder: read the line, play it back, keep it or record again. A level meter warns when you're too loud.
+- **⇄** gives a line to a different actor. **▶ Play from cursor** plays the finished clips in order, following along in the manuscript.
+- **Pronunciation list:** voices receive your spelling of tricky words ("Mamgu" → "Mam-ghee"). The manuscript keeps the real spelling.
+
+## Export
+- Clips are joined in reading order with natural pauses: within a paragraph, between paragraphs, and longer at scene breaks and headings.
+- Output is one file per chapter, plus a full-book MP3, in a `<Book> audiobook` folder beside the manuscript.
+- Formats: MP3 192 kbps (Audible/ACX) or 16-bit WAV.
+- Optional levelling to ACX standards: average −20 dB, peaks limited below −3 dB, quiet room tone in the pauses. A report shows each file's levels.
+- A coverage table shows how much of each chapter has been voiced.
+
+## Settings
+- Two new connection types, **Gemini TTS** and **ElevenLabs**. Add them from "+ Add an AI or voice service…".
+- Voice keys are stored and protected exactly like AI keys, and only ever sent to the address saved with them.
+- Voice services never appear in the AI desk.
+
+## Desktop edition
+- The microphone may be used (sound only) for recording your own lines. Camera and every other permission are still refused.
+
+## Third-party
+- MP3 export uses lamejs (LGPL-3.0). See THIRD_PARTY_LICENSES.md.
+
+## Tests
+- `test/audio-unit.js` covers segmenting, pronunciation, pauses, chapters, the limiter, WAV writing and the voice-service requests. It runs as part of `npm run test:unit`.
+- `test/audiobook.js` is a browser end-to-end test with a fake Gemini TTS server and a simulated microphone. It covers cast, voicing, out-of-date clips, recording, saving, and MP3/WAV export with level checks.
+- `test/smoke.js` adds desktop checks: voice calls through the main process, key handling, clip and export files, and microphone-only permission.

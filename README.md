@@ -27,12 +27,17 @@ For the complete source, choose **Code > Download ZIP**. Extract it before openi
 - PDF, Word and EPUB export. PDF import is not a supported workflow documented for this build.
 - A local audio player for music, ambient sound or spoken recordings while you write. Listening does not add audio to your exported book.
 - Folder-based book data and package backups.
+- An audiobook studio: cast character voices (Gemini TTS, ElevenLabs or your own microphone), voice passages with dialogue and narration split automatically, and export chapter MP3s levelled for Audible/ACX.
 
 ## Your writing and settings
 
 Keep each `.md` manuscript together with its matching `.crucible` folder and referenced images/media. Browser folder settings live in `crucible-settings.json`; that file may contain unencrypted API keys. Do not upload your working folder to this repository.
 
 To update, save and close the app, back up your working folder, and replace only `crucible.html`. Preserve settings, books and companion files. The author's About statement is unchanged.
+
+## Version 1.10.0
+
+Version 1.10.0 adds the Audiobook studio (the Audio tab). See [release notes](RELEASE-NOTES-1.10.0.md).
 
 ## Version 1.9.8
 

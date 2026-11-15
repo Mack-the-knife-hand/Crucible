@@ -54,7 +54,10 @@ const Highlights = {
 
   render() {
     if (!this.back) return;
-    const rs = this.enabled() ? this.ranges() : [];
+    // Voiced text (Audiobook studio) is underlined in its actor's colour,
+    // independent of the coloured-passage switch.
+    const au = typeof Audiobook !== 'undefined' ? Audiobook.ranges() : [];
+    const rs = [...(this.enabled() ? this.ranges() : []), ...au];
     this.back.classList.toggle('hidden', !rs.length);
     if (!rs.length) { this.inner.textContent = ''; return; }
     this.matchBox();
@@ -67,11 +70,14 @@ const Highlights = {
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i + 1];
       const piece = text.slice(a, b);
-      const kinds = [...new Set(rs.filter((r) => r.start <= a && r.end >= b).map((r) => r.kind))];
-      if (!kinds.length) { frag.append(document.createTextNode(piece)); continue; }
+      const over = rs.filter((r) => r.start <= a && r.end >= b);
+      const kinds = [...new Set(over.filter((r) => r.kind !== 'audio').map((r) => r.kind))];
+      const voice = over.find((r) => r.kind === 'audio');
+      if (!kinds.length && !voice) { frag.append(document.createTextNode(piece)); continue; }
       const m = document.createElement('mark');
       m.className = kinds.map((k) => this.KINDS[k]).join(' ');
       if (kinds.length > 1) m.classList.add(`hl-${kinds.length}`);
+      if (voice) { m.classList.add('hl-au', `hl-au-${voice.st}`); m.style.setProperty('--au', voice.color); }
       m.textContent = piece;
       frag.append(m);
     }

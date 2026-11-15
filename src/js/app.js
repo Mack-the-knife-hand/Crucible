@@ -23,6 +23,7 @@ const App = {
     Notes.init();
     Highlights.init();
     Speech.init();
+    Audiobook.init();
     Goals.init();
     Player.init();
 
@@ -261,6 +262,7 @@ const App = {
     AI.renderChat();
     Prose.render();
     Notes.render();
+    Audiobook.render();
   },
 
   // -------------------------------------------------------------- files --

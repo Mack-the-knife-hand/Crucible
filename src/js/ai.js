@@ -36,10 +36,11 @@ const AI = {
   renderProviders() {
     const sel = $('#providerSelect');
     sel.innerHTML = '';
-    const ps = S.settings.providers;
+    // Voice services (Audiobook studio) can't hold a conversation: not listed here.
+    const ps = S.settings.providers.filter((p) => !AudioScript.TTS.isVoice(p));
     if (!ps.length) sel.append(el('option', { value: '' }, 'Add an AI in Settings ⚙'));
     for (const p of ps) sel.append(el('option', { value: p.id }, `${p.name} · ${p.model || '?'}`));
-    sel.value = S.settings.activeProviderId || ps[0]?.id || '';
+    sel.value = ps.some((p) => p.id === S.settings.activeProviderId) ? S.settings.activeProviderId : ps[0]?.id || '';
   },
 
   activeItems() {

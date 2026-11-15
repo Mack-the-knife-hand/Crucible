@@ -89,12 +89,15 @@ const Settings = {
     { name: 'OpenRouter', type: 'openai', baseUrl: 'https://openrouter.ai/api/v1', model: '', needsKey: true },
     { name: 'Groq', type: 'openai', baseUrl: 'https://api.groq.com/openai/v1', model: '', needsKey: true },
     { name: 'Custom (OpenAI-compatible)', type: 'openai', baseUrl: '', model: '', needsKey: true },
+    // Voice services for the Audiobook studio (not used by the AI desk).
+    { name: 'Gemini TTS (audiobook voices)', type: 'gemini-tts', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-3.8-flash-tts', needsKey: true, voice: true },
+    { name: 'ElevenLabs (audiobook voices)', type: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io', model: 'eleven_multilingual_v2', needsKey: true, voice: true },
   ],
 
   open() {
     // Work on a copy; nothing is saved until you press Save.
     const draft = S.settings.providers.map((p) => ({ ...p }));
-    let activeId = S.settings.activeProviderId || draft[0]?.id || null;
+    let activeId = S.settings.activeProviderId || draft.find((x) => !AudioScript.TTS.isVoice(x))?.id || null;
     const ui = { ...S.settings.ui };
     const listBox = el('div');
 
@@ -108,8 +111,10 @@ const Settings = {
           n.addEventListener('input', () => (p[key] = n.value));
           return n;
         };
+        const isVoice = AudioScript.TTS.isVoice(p);
         const type = el('select');
-        [['anthropic', 'Anthropic (Claude)'], ['openai', 'OpenAI-compatible'], ['gemini', 'Google Gemini']]
+        (isVoice ? [['gemini-tts', 'Gemini TTS (voices)'], ['elevenlabs', 'ElevenLabs (voices)']]
+          : [['anthropic', 'Anthropic (Claude)'], ['openai', 'OpenAI-compatible'], ['gemini', 'Google Gemini']])
           .forEach(([v, t]) => type.append(el('option', { value: v }, t)));
         type.value = p.type;
         type.onchange = () => (p.type = type.value);
@@ -119,7 +124,7 @@ const Settings = {
 
         listBox.append(el('div', { class: `prov-card ${p.id === activeId ? 'active' : ''}` },
           el('div', { class: 'row', style: 'display:flex;gap:8px;align-items:center;margin-bottom:4px' },
-            el('label', { class: 'check' }, el('input', {
+            isVoice ? el('span', { class: 'au-tag', title: 'Used by actors in the Audio tab' }, '🎙 Voices') : el('label', { class: 'check' }, el('input', {
               type: 'radio', name: 'activeProv', checked: p.id === activeId,
               onchange: () => { activeId = p.id; renderList(); },
             }), 'Default'),
@@ -129,6 +134,12 @@ const Settings = {
               class: 'small', onclick: async () => {
                 status.textContent = 'saving & testing…';
                 await save();
+                if (isVoice) {
+                  const v = await window.crucible.listVoices({ providerId: p.id });
+                  status.textContent = v.ok ? `✓ ${v.voices.length} voices available` : `✕ ${snippet(v.error, 70)}`;
+                  status.style.color = v.ok ? 'var(--ok)' : 'var(--bad)';
+                  return;
+                }
                 const r = await window.crucible.aiChat({
                   providerId: p.id, system: 'You are a connection test.',
                   messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
@@ -137,31 +148,32 @@ const Settings = {
                 status.style.color = r.ok ? 'var(--ok)' : 'var(--bad)';
               },
             }, 'Test'),
-            el('button', { class: 'small ghost danger', onclick: () => { draft.splice(i, 1); if (activeId === p.id) activeId = draft[0]?.id || null; renderList(); } }, 'Remove')),
+            el('button', { class: 'small ghost danger', onclick: () => { draft.splice(i, 1); if (activeId === p.id) activeId = draft.find((x) => !AudioScript.TTS.isVoice(x))?.id || null; renderList(); } }, 'Remove')),
           field('Name', inp('name')),
           field('Connection type', type),
           field('Base URL', inp('baseUrl', { placeholder: 'https://…' }), p.hasKey ? 'Your key is only ever sent to this address. Changing it (or the connection type) clears the saved key, so type the key again.' : ''),
-          field('Model', inp('model', { placeholder: p.type === 'anthropic' ? 'claude-sonnet-5-5' : 'model name from your provider' }),
-            'The exact model ID from your provider\'s docs (for Ollama, run "ollama list").'),
+          field('Model', inp('model', { placeholder: p.type === 'anthropic' ? 'claude-sonnet-5-5' : isVoice ? (AudioScript.TTS.DEFAULTS[p.type]?.model || '') : 'model name from your provider' }),
+            isVoice ? 'The voice model. Gemini: gemini-3.8-flash-tts (supports voices you design in Google AI Studio). ElevenLabs: eleven_multilingual_v2 or eleven_v3.'
+              : 'The exact model ID from your provider\'s docs (for Ollama, run "ollama list").'),
           field('API key', key, S.settings.keyStorage === 'session'
             ? 'This computer has no secure key storage (such as a system keyring), so Crucible keeps keys in memory only and never writes them to disk. You\'ll need to enter them again each time you start Crucible.'
             : ''),
-          field('Max reply tokens', inp('maxTokens', { type: 'number', placeholder: '4096' })),
-          field('Temperature', inp('temperature', { type: 'number', step: '0.1', placeholder: 'provider default' })),
-          field('Timeout (seconds)', inp('timeoutSec', { type: 'number', placeholder: '180' }), 'Raise this for slow local models.')));
+          isVoice ? null : field('Max reply tokens', inp('maxTokens', { type: 'number', placeholder: '4096' })),
+          isVoice ? null : field('Temperature', inp('temperature', { type: 'number', step: '0.1', placeholder: 'provider default' })),
+          field('Timeout (seconds)', inp('timeoutSec', { type: 'number', placeholder: isVoice ? '120' : '180' }), isVoice ? 'How long to wait for one line of speech.' : 'Raise this for slow local models.')));
       });
     };
 
     const presetSel = el('select');
-    presetSel.append(el('option', { value: '' }, '+ Add an AI…'));
+    presetSel.append(el('option', { value: '' }, '+ Add an AI or voice service…'));
     this.PRESETS.forEach((p, i) => presetSel.append(el('option', { value: i }, p.name)));
     presetSel.onchange = () => {
       const pr = this.PRESETS[presetSel.value];
       presetSel.value = '';
       if (!pr) return;
-      const p = { id: uid(), name: pr.name, type: pr.type, baseUrl: pr.baseUrl, model: pr.model, maxTokens: 4096, temperature: '', timeoutSec: pr.needsKey ? 180 : 600 };
+      const p = { id: uid(), name: pr.name, type: pr.type, baseUrl: pr.baseUrl, model: pr.model, maxTokens: 4096, temperature: '', timeoutSec: pr.voice ? 120 : pr.needsKey ? 180 : 600 };
       draft.push(p);
-      if (!activeId) activeId = p.id;
+      if (!activeId && !pr.voice) activeId = p.id;
       renderList();
     };
 
