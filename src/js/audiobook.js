@@ -43,6 +43,18 @@ const Audiobook = {
   actor(id) { return this.data().actors.find((x) => x.id === id) || null; },
   narrator() { return this.data().actors.find((x) => x.narrator) || null; },
   voiceProviders() { return (S.settings.providers || []).filter((p) => AudioScript.TTS.isVoice(p)); },
+  // Without a real voice name the service picks a different voice for
+  // every line, so one actor sounds like a crowd.
+  voiceProblem(x) {
+    if (x.engine === 'mic') return null;
+    const vprov = this.voiceProviders().find((p) => p.id === x.providerId);
+    const v = (x.voice || '').trim();
+    if (!v) return `${x.name} has no voice chosen. Press ✎ next to ${x.name}, then Load my voices and pick one.`;
+    if (vprov && vprov.type === 'gemini-tts' && !/^voice(key)?_[\w-]+$|^[A-Za-z]+$/.test(v)) {
+      return `"${v}" isn't a Gemini voice name. Press ✎ next to ${x.name}, then Load my voices and pick one (e.g. Kore) or your designed voice_… ID.`;
+    }
+    return null;
+  },
   stale(c) { return c.status === 'ok' && c.text !== c.spoken; },
   state(c) { return c.missing ? 'missing' : this.stale(c) ? 'stale' : c.status; },
 
@@ -85,7 +97,7 @@ const Audiobook = {
     }
     for (const x of a.actors) {
       const p = (S.settings.providers || []).find((q) => q.id === x.providerId);
-      const how = x.engine === 'mic' ? '🎙 your microphone' : p ? `${p.name}${x.voice ? ' · ' + x.voice : ''}` : '⚠ no voice service';
+      const how = x.engine === 'mic' ? '🎙 your microphone' : !p ? '⚠ no voice service' : this.voiceProblem(x) ? `⚠ ${x.voice ? '"' + x.voice + '" isn\'t a voice' : 'no voice chosen'}` : `${p.name} · ${x.voice}`;
       box.append(el('div', { class: 'au-actor' },
         el('span', { class: 'au-dot', style: `background:${x.color}` }),
         el('div', { class: 'au-who' }, el('strong', {}, x.name), x.narrator ? el('span', { class: 'au-tag' }, 'Narrator') : null,
@@ -232,6 +244,8 @@ const Audiobook = {
           class: 'small', onclick: async () => {
             read();
             if (x.engine === 'mic') { test.textContent = 'Microphone actors record in the studio.'; return; }
+            const bad = this.voiceProblem(x);
+            if (bad) { test.textContent = `✕ ${bad}`; return; }
             test.textContent = 'Speaking…';
             const sel = Editor.selection();
             const line = sel.end > sel.start ? AudioScript.spoken(sel.text, this.data().lexicon).slice(0, 300) : `This is ${x.name}. Testing, one, two, three.`;
@@ -350,6 +364,8 @@ const Audiobook = {
       if (vp.length === 1) { x.providerId = vp[0].id; markDirty(true); this.renderActors(); }
       else throw new Error(vp.length ? `Choose a voice service for ${x.name}: press ✎ next to ${x.name} in the Cast list.` : 'Add a voice service first: Settings ⚙ → "+ Add an AI or voice service…" → Gemini TTS (audiobook voices).');
     }
+    const bad = this.voiceProblem(x);
+    if (bad) throw new Error(bad);
     const text = AudioScript.spoken(Editor.text.slice(c.start, c.end), this.data().lexicon);
     if (!text) throw new Error('Nothing to say in this clip.');
     // Busy or rate-limited services usually answer on a second try.

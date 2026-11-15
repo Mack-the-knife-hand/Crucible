@@ -1,6 +1,8 @@
 # Crucible 1.10.0 — Audiobook studio
 
 **1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
+**1.10.6:** An actor whose Voice box is empty or holds something that isn't a voice name (e.g. a character name) is now stopped with a clear message instead of being sent; the service otherwise picks a different voice for every line. The Cast list flags such actors with ⚠.
+
 **1.10.5:** After "Load my voices", the actor editor shows a real dropdown of every voice (picking one fills in the Voice box); the empty voice-service message now says exactly where to add one.
 
 
