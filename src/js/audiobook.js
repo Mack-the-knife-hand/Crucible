@@ -171,7 +171,9 @@ const Audiobook = {
   },
 
   // ----------------------------------------------------------- actors --
-  editActor(actor, asNarrator = false) {
+  async editActor(actor, asNarrator = false) {
+    // Fresh settings, in case a voice service was added in another tab.
+    try { S.settings = await window.crucible.getSettings(); } catch { /* keep current */ }
     const a = this.data();
     const isNew = !actor;
     const x = actor ? { ...actor } : {

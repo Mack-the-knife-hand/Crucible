@@ -94,7 +94,11 @@ const Settings = {
     { name: 'ElevenLabs (audiobook voices)', type: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io', model: 'eleven_multilingual_v2', needsKey: true, voice: true },
   ],
 
-  open() {
+  async open() {
+    // Start from what's actually stored, not this window's copy: another
+    // Crucible tab may have changed settings since this one loaded, and
+    // saving a stale copy would quietly undo that (and drop its keys).
+    try { S.settings = await window.crucible.getSettings(); } catch { /* keep current */ }
     // Work on a copy; nothing is saved until you press Save.
     const draft = S.settings.providers.map((p) => ({ ...p }));
     let activeId = S.settings.activeProviderId || draft.find((x) => !AudioScript.TTS.isVoice(x))?.id || null;

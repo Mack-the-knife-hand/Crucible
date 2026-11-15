@@ -1,5 +1,7 @@
 # Crucible 1.10.0 — Audiobook studio
 
+**1.10.4:** Settings and the actor editor always start from the stored settings, and the browser edition warns when Crucible is open in two tabs (where one could undo the other's changes, such as a new voice service and its key).
+
 **1.10.3:** a saved API key now says so in green ("✓ Key saved") instead of looking like an empty box.
 
 **1.10.2:** failed clips show their error in the list; an actor left without a voice service uses your only one automatically.

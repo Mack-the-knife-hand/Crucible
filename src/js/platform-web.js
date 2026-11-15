@@ -580,6 +580,20 @@
     });
   }
 
+  // ------------------------------------------------- one window at a time --
+  // Two Crucible tabs share the same browser settings; changes in one can
+  // undo the other's (a voice service or key "disappearing"). Warn.
+  try {
+    const bc = new BroadcastChannel('crucible-app');
+    bc.onmessage = (e) => {
+      if (e.data === 'hello') bc.postMessage('here');
+      if (e.data === 'hello' || e.data === 'here') {
+        setTimeout(() => toast('Crucible is open in another tab or window. Close all but one, or settings changed in one can undo the other.', true, 12000), 800);
+      }
+    };
+    bc.postMessage('hello');
+  } catch { /* old browser */ }
+
   // -------------------------------------------------------------- dirty --
   let dirty = false;
   window.addEventListener('beforeunload', (e) => {
