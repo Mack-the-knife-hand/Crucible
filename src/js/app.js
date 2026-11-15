@@ -9,7 +9,39 @@ const App = {
     return el('img', { class: `app-logo ${cls}`, src, alt: '' });
   },
 
+  // Opening splash: the logo for five seconds, or until any key, click or
+  // touch. The key that ends it is swallowed, so it never lands in the book.
+  // (Skipped under test automation unless the address ends in #splash.)
+  splash() {
+    if (navigator.webdriver && !location.hash.includes('splash')) return;
+    const src = document.getElementById('splashLogo')?.innerHTML.trim() || 'img/splash.webp';
+    const ver = el('div', { class: 'splash-ver' });
+    const box = el('div', { id: 'splash', role: 'dialog', 'aria-label': 'Crucible' },
+      el('div', { class: 'splash-inner' },
+        el('img', { class: 'splash-logo', src, alt: '' }),
+        el('div', { class: 'splash-title' }, 'Crucible'),
+        el('div', { class: 'splash-tag' }, 'Write the thing you\'ve been carrying around.'),
+        ver,
+        el('div', { class: 'splash-hint' }, 'Press any key to begin')));
+    document.body.append(box);
+    Promise.resolve(window.crucible.getVersion?.()).then((v) => { v = v || window.CRUCIBLE_VERSION; if (v) ver.textContent = `Version ${v}`; }).catch(() => {});
+    let gone = false;
+    const end = (e) => {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      if (gone) return;
+      gone = true;
+      clearTimeout(timer);
+      ['keydown', 'mousedown', 'touchstart'].forEach((t) => window.removeEventListener(t, end, true));
+      // Keep eating the matching keyup/click for a moment.
+      box.classList.add('out');
+      setTimeout(() => box.remove(), 350);
+    };
+    const timer = setTimeout(() => end(), 5000);
+    ['keydown', 'mousedown', 'touchstart'].forEach((t) => window.addEventListener(t, end, true));
+  },
+
   async init() {
+    this.splash();
     S.settings = await window.crucible.getSettings();
     S.project = blankProject();
     this.applyUi();
@@ -23,6 +55,7 @@ const App = {
     Notes.init();
     Highlights.init();
     Speech.init();
+    Audiobook.init();
     Goals.init();
     Player.init();
 
@@ -261,6 +294,7 @@ const App = {
     AI.renderChat();
     Prose.render();
     Notes.render();
+    Audiobook.render();
   },
 
   // -------------------------------------------------------------- files --

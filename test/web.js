@@ -426,7 +426,7 @@ async function seed(page) {
   const about = await js(() => document.querySelector('.modal-back:last-child .modal')?.textContent || '');
   await page.screenshot({ path: path.join(OUT, 'w25-about.png') });
   await js(() => document.querySelector('.modal-back:last-child')?.remove());
-  check('About window: made by Mack, with his note', about.includes('made by Mack') && about.includes('because I love you') && about.includes('no paywalls') && about.includes('— Mack'), about.slice(0, 160));
+  check('About window: made by Mack, with his note', about.includes('made by Mack') && !about.includes('love you') && about.includes('no paywalls') && about.includes('— Mack'), about.slice(0, 160));
   check('App icon in the browser tab and the top bar', ico.fav && ico.brand > 0, JSON.stringify(ico));
   check('No page errors (computer 1)', errors.length === 0, errors.join(' | '));
   const drive = await js(DUMP);

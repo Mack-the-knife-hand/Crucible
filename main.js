@@ -117,6 +117,7 @@ const hasUsableKey = (stored) => !!stored && (!stored.startsWith('mem:') || sess
 
 // Defaults + upgrades live in a file shared with the browser edition.
 const SettingsCore = require('./src/js/settings-core.js');
+const AudioScript = require('./src/js/audioscript.js');
 
 async function loadSettings() {
   const s = SettingsCore.migrateSettings(await readJson(settingsFile(), {}));
@@ -376,6 +377,83 @@ async function aiFetch(url, opts) {
   }
 }
 
+// ------------------------------------------------------------ audiobook ----
+// Voice services (Gemini TTS, ElevenLabs). Requests are built by
+// audioscript.js, the same as in the browser edition; the key is added here
+// and only ever sent to the address saved with that voice provider.
+async function voiceProvider(providerId) {
+  const s = await loadSettings();
+  const p = s.providers.find((x) => x.id === providerId);
+  if (!p) throw new Error("This actor's voice service was removed. Choose another in the actor settings.");
+  if (!AudioScript.TTS.isVoice(p)) throw new Error(`"${p.name}" is a writing AI, not a voice service.`);
+  return p;
+}
+async function ttsFetch(url, keyHeader, key, body, timeoutSec) {
+  key = String(key || '').trim();
+  if (/[^\x21-\x7e]/.test(key)) throw new Error("The saved API key contains a space or a character that can't be sent. In Settings, paste the key again.");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), (Number(timeoutSec) || 120) * 1000);
+  try {
+    return await aiFetch(url, {
+      method: body ? 'POST' : 'GET', signal: controller.signal,
+      headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(key ? { [keyHeader]: key } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error("The voice service didn't answer in time.");
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+async function ttsError(r) {
+  let j = await r.json().catch(() => ({}));
+  if (Array.isArray(j)) j = j[0] || {}; // some Google endpoints wrap the error in a list
+  const e = new Error(j.error?.message || j.detail?.message || (typeof j.detail === 'string' ? j.detail : '') || j.message || `HTTP ${r.status}`);
+  e.status = r.status;
+  return e;
+}
+async function callTTS({ providerId, text, voice, style }) {
+  const p = await voiceProvider(providerId);
+  const T = AudioScript.TTS;
+  const key = decryptKey(p.apiKey);
+  let req = T.request(p, { text: String(text || ''), voice, style });
+  let r = await ttsFetch(req.url, req.keyHeader, key, req.body, p.timeoutSec);
+  if (!r.ok && r.status === 404 && p.type === 'gemini-tts' && /interactions$/.test(req.url) && !/^voice/.test(voice || '')) {
+    req = T.request(p, { text: String(text || ''), voice, style }, { legacy: true });
+    r = await ttsFetch(req.url, req.keyHeader, key, req.body, p.timeoutSec);
+  }
+  if (!r.ok) throw await ttsError(r);
+  const ct = r.headers.get('content-type') || '';
+  if (/json/i.test(ct)) {
+    const hit = T.findAudio(await r.json());
+    if (!hit) throw new Error('The voice service answered without any audio.');
+    return T.finish(new Uint8Array(Buffer.from(hit.b64, 'base64')), hit.mime);
+  }
+  return T.finish(new Uint8Array(await r.arrayBuffer()), ct);
+}
+async function listTTSVoices({ providerId }) {
+  const p = await voiceProvider(providerId);
+  const T = AudioScript.TTS;
+  const key = decryptKey(p.apiKey);
+  const out = [];
+  for (const kind of p.type === 'gemini-tts' ? ['replicated', 'prompted', 'prebuilt'] : ['']) {
+    const q = T.voicesRequest(p, kind);
+    const r = await ttsFetch(q.url, q.keyHeader, key, null, p.timeoutSec);
+    // Your own (cloned and designed) voices first; a filter the service
+    // doesn't know is skipped rather than failing the whole list.
+    if (!r.ok) { const e = await ttsError(r); out.err = out.err || e; continue; }
+    for (const v of T.parseVoices(p, await r.json())) if (!out.some((o) => o.id === v.id)) out.push(v);
+  }
+  if (!out.length && out.err) throw out.err;
+  return out;
+}
+// Clip file names are made by Crucible ("<id>.wav"); anything else is refused.
+function audioPath(bookPath, name) {
+  const n = String(name || '');
+  if (!/^[\w-]{1,64}\.(wav|mp3|webm|ogg|m4a)$/.test(n)) throw new Error('Bad audio file name.');
+  return path.join(sidecarDir(bookPath), 'audio', n);
+}
+const abFiles = new Map(); // audiobook files being written: token -> { fh, file }
+
 function trimBase(u) {
   return (u || '').replace(/\/+$/, '');
 }
@@ -384,6 +462,7 @@ async function callAI({ providerId, system, messages, bookPath, imageFiles }) {
   const s = await loadSettings();
   const p = s.providers.find((x) => x.id === (providerId || s.activeProviderId));
   if (!p) throw new Error('No AI provider selected. Add one in Settings.');
+  if (AudioScript.TTS.isVoice(p)) throw new Error(`"${p.name}" is a voice service for the audiobook, not a writing AI. Choose another AI.`);
   const key = decryptKey(p.apiKey);
   const images = await loadImagesForAI(bookPath, imageFiles);
   // Pictures ride along with the newest message (the one being answered).
@@ -774,7 +853,7 @@ function registerIpc() {
     await trustBook(res.filePath);
     // Carry story memory and linked pictures across to the new location.
     if (currentPath && currentPath !== res.filePath && (await isTrustedBook(currentPath))) {
-      for (const sub of ['memory', 'linked']) {
+      for (const sub of ['memory', 'linked', 'audio']) {
         const from = path.join(sidecarDir(currentPath), sub);
         if (fs.existsSync(from)) await fsp.cp(from, path.join(sidecarDir(res.filePath), sub), { recursive: true }).catch(() => {});
       }
@@ -976,6 +1055,56 @@ function registerIpc() {
     }
   });
 
+  handle('tts:speak', async (_e, args) => {
+    try { return { ok: true, ...(await callTTS(args || {})) }; } catch (e) { return { ok: false, error: e.message }; }
+  });
+  handle('tts:voices', async (_e, args) => {
+    try { return { ok: true, voices: await listTTSVoices(args || {}) }; } catch (e) { return { ok: false, error: e.message }; }
+  });
+  handle('book:writeAudio', async (_e, { bookPath, name, data }) => {
+    const p = audioPath(await checkBook(bookPath), name);
+    await ensureDir(path.dirname(p));
+    await atomicWrite(p, Buffer.from(data));
+    return true;
+  });
+  handle('book:readAudio', async (_e, { bookPath, name }) => {
+    try { return new Uint8Array(await fsp.readFile(audioPath(await checkBook(bookPath), name))); } catch { return null; }
+  });
+  handle('book:deleteAudio', async (_e, { bookPath, name }) => {
+    await fsp.unlink(audioPath(await checkBook(bookPath), name)).catch(() => {});
+  });
+  handle('book:listAudio', async (_e, { bookPath }) => {
+    const dir = path.join(sidecarDir(await checkBook(bookPath)), 'audio');
+    return fs.existsSync(dir) ? (await fsp.readdir(dir)).filter((f) => /^[\w-]{1,64}\.(wav|mp3|webm|ogg|m4a)$/.test(f)) : [];
+  });
+  // Finished audiobook files: "<Book> audiobook/" beside the manuscript.
+  handle('audiobook:begin', async (_e, { bookPath, name }) => {
+    bookPath = await checkBook(bookPath);
+    const base = path.basename(bookPath, path.extname(bookPath));
+    const dir = await ensureDir(path.join(path.dirname(bookPath), `${AudioScript.fileSafe(base)} audiobook`));
+    const file = path.join(dir, AudioScript.fileSafe(name));
+    const token = uid();
+    abFiles.set(token, { fh: await fsp.open(file, 'w'), file });
+    return { token, where: file };
+  });
+  handle('audiobook:write', async (_e, { token, data }) => {
+    const x = abFiles.get(String(token));
+    if (!x) throw new Error('That export was closed.');
+    await x.fh.write(Buffer.from(data));
+  });
+  handle('audiobook:end', async (_e, { token }) => {
+    const x = abFiles.get(String(token));
+    abFiles.delete(String(token));
+    if (!x) return null;
+    await x.fh.close();
+    return { path: x.file };
+  });
+  handle('audiobook:abort', async (_e, { token }) => {
+    const x = abFiles.get(String(token));
+    abFiles.delete(String(token));
+    if (x) { await x.fh.close().catch(() => {}); await fsp.unlink(x.file).catch(() => {}); }
+  });
+
   handle('export:pdf', (_e, args) => exportPdf(args));
 
   listen('state:dirty', (_e, dirty) => { rendererDirty = !!dirty; });
@@ -1022,12 +1151,15 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (e) => e.preventDefault());
   mainWindow.webContents.on('will-attach-webview', (e) => e.preventDefault());
 
-  // Crucible needs no camera, microphone, location, notifications…: refuse
-  // every permission except reading the clipboard for Paste.
+  // Crucible needs no camera, location, notifications…: refuse every
+  // permission except reading the clipboard for Paste.
   const ses = mainWindow.webContents.session;
+  // The one exception is the microphone (sound only, never the camera), for
+  // recording your own lines in the Audiobook studio; Windows/macOS still ask.
   const allowed = new Set(['clipboard-read', 'clipboard-sanitized-write']);
-  ses.setPermissionRequestHandler((_wc, perm, cb) => cb(allowed.has(perm)));
-  ses.setPermissionCheckHandler((_wc, perm) => allowed.has(perm));
+  const micOnly = (d) => { const t = d?.mediaTypes || (d?.mediaType ? [d.mediaType] : []); return t.length > 0 && t.every((x) => x === 'audio'); };
+  ses.setPermissionRequestHandler((_wc, perm, cb, details) => cb(allowed.has(perm) || (perm === 'media' && micOnly(details))));
+  ses.setPermissionCheckHandler((_wc, perm, _origin, details) => allowed.has(perm) || (perm === 'media' && micOnly(details)));
   // The window itself never talks to the internet (AI calls are made here, in
   // the main process) and never reads files from other computers.
   ses.webRequest.onBeforeRequest((d, cb) => {

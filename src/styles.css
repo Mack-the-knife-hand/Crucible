@@ -583,3 +583,66 @@ input[type="range"] { accent-color: var(--ember); padding: 0; border: 0; backgro
 .ai-context-help { grid-column: 1 / -1; max-height: 220px; overflow: auto; font-size: 12px; line-height: 1.5; margin: 6px 0; color: var(--muted); }
 .ai-context-help summary { cursor: pointer; }
 .ai-context-help p { margin: 6px 0; }
+
+/* ============================== Audiobook studio ============================== */
+.au-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; min-width: 0; padding: 6px 10px 18px; }
+.au-head { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; font-family: var(--serif); font-size: 15px; }
+.au-head:first-child { margin-top: 6px; }
+.au-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.au-box .prow, .au-scroll > .prow { display: flex; align-items: center; gap: 8px; }
+.au-box .prow label { color: var(--muted); font-size: 12.5px; }
+.au-box select { flex: 1; min-width: 0; width: 100%; }
+.au-actor { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.au-who { flex: 1; min-width: 0; }
+.au-how { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.au-tag { margin-left: 6px; font-size: 10.5px; padding: 1px 6px; border-radius: 8px; background: var(--ember-glow); color: var(--ember-2); }
+.au-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--panel); }
+.au-clip { display: flex; align-items: flex-start; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.au-clip .au-dot { margin-top: 4px; }
+.au-ctext { flex: 1; min-width: 0; cursor: pointer; line-height: 1.4; }
+.au-ctext:hover { color: var(--ember-2); }
+.au-err { color: var(--bad); font-size: 11.5px; margin-top: 3px; line-height: 1.35; }
+.au-cbtn { display: flex; gap: 2px; flex: none; }
+.au-cbtn button { padding: 2px 6px; }
+.au-clip.st-stale .au-ctext .muted, .au-clip.st-error .au-ctext .muted { color: var(--bad); }
+.au-clip.st-pending, .au-clip.st-working { opacity: .7; }
+.au-sub { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 8px 4px; }
+.au-barwrap { height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
+.au-bar { height: 100%; width: 0; background: var(--ember); transition: width .2s; }
+.au-exprog { margin-top: 10px; }
+.au-opts { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.au-covwrap { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; }
+table.au-cov, table.au-lex { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.au-cov th, table.au-cov td, table.au-lex th, table.au-lex td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+table.au-cov td.warn { color: var(--bad); }
+table.au-cov td.ok { color: var(--ok); }
+table.au-lex input[type="text"], table.au-lex input:not([type]) { width: 100%; }
+/* Voiced text: underlined in the actor's colour; out-of-date clips dashed red. */
+#hlBackdrop mark.hl-au:not(.hl-img):not(.hl-note):not(.hl-song) { background-color: transparent; }
+#hlBackdrop mark.hl-au { box-shadow: inset 0 -2px 0 var(--au); }
+#hlBackdrop mark.hl-au-stale, #hlBackdrop mark.hl-au-error { box-shadow: none; background-image: linear-gradient(90deg, var(--bad) 60%, transparent 60%); background-size: 8px 2px; background-repeat: repeat-x; background-position: 0 100%; }
+#hlBackdrop mark.hl-au-pending, #hlBackdrop mark.hl-au-working { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--au) 40%, transparent); }
+/* Recorder */
+.rec-modal .rec-line { font: 20px/1.6 var(--serif); padding: 14px 16px; margin: 10px 0; background: var(--panel-2); border-radius: var(--radius); border: 1px solid var(--line); max-height: 40vh; overflow-y: auto; }
+.rec-meter { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.rec-level { height: 100%; width: 0; background: var(--ok); }
+.rec-level.hot { background: var(--bad); }
+.rec-btns { display: flex; gap: 8px; margin: 10px 0 6px; flex-wrap: wrap; }
+/* Four tabs on the right: keep them on one line without pushing the panel wider. */
+#right .tabs { min-width: 0; }
+#right .tabs button { padding-left: 8px; padding-right: 8px; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
+#right .tabs .collapse-btn { flex: none; }
+
+/* A stored API key: the box is empty on purpose, so say so clearly. */
+input.key-saved::placeholder { color: var(--ok); opacity: 1; }
+
+/* Opening splash */
+#splash { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #2a1d17 0%, #141012 70%); color: #f3e9df; opacity: 1; transition: opacity .35s ease; cursor: pointer; }
+#splash.out { opacity: 0; pointer-events: none; }
+.splash-inner { text-align: center; animation: splash-in .6s ease both; }
+.splash-logo { width: 196px; height: 196px; display: block; margin: 0 auto 18px; filter: drop-shadow(0 6px 28px rgba(232, 116, 59, .45)); }
+.splash-title { font-family: var(--serif); font-size: 46px; letter-spacing: .04em; }
+.splash-tag { font-family: var(--serif); font-style: italic; font-size: 17px; opacity: .8; margin-top: 6px; }
+.splash-ver { font-size: 12px; opacity: .5; margin-top: 18px; min-height: 1em; }
+.splash-hint { font-size: 12px; opacity: .45; margin-top: 6px; letter-spacing: .08em; text-transform: uppercase; }
+@keyframes splash-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }

@@ -69,6 +69,18 @@ contextBridge.exposeInMainWorld('crucible', {
   aiChat: invoke('ai:chat'),
   exportPdf: invoke('export:pdf'),
 
+  // Audiobook: voices, clip files, finished audio files
+  tts: invoke('tts:speak'),
+  listVoices: invoke('tts:voices'),
+  writeBookAudio: invoke('book:writeAudio'),
+  readBookAudio: invoke('book:readAudio'),
+  deleteBookAudio: invoke('book:deleteAudio'),
+  listBookAudio: invoke('book:listAudio'),
+  audiobookBegin: invoke('audiobook:begin'),
+  audiobookWrite: invoke('audiobook:write'),
+  audiobookEnd: invoke('audiobook:end'),
+  audiobookAbort: invoke('audiobook:abort'),
+
   // Spelling
   replaceMisspelling: invoke('spell:replace'),
   onSpelling: (fn) => ipcRenderer.on('spell:suggestions', (_e, d) => fn(d)),

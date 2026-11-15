@@ -31,6 +31,7 @@ html = html.replace(/(src|href)="(img\/[^"]+\.png)"/g, (_m, a, f) =>
 // Larger copy for the welcome screen and About (read by App.logo(); it sits
 // first in <body> so it's there before any script runs).
 html = html.replace('<body>', () => `<body>\n<template id="appLogo">data:image/png;base64,${fs.readFileSync(path.join(SRC, 'img/icon-128.png')).toString('base64')}</template>`);
+html = html.replace('<body>', () => `<body>\n<template id="splashLogo">data:image/webp;base64,${fs.readFileSync(path.join(SRC, 'img/splash.webp')).toString('base64')}</template>`);
 
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_m, f) =>
   `<style>\n${fs.readFileSync(path.join(SRC, f), 'utf8')}\n</style>`);
@@ -47,7 +48,8 @@ html = html.replace('<title>Crucible</title>', `<title>Crucible</title>\n  <meta
 const purifyNotice = 'DOMPurify 3 (https://github.com/cure53/DOMPurify), (c) Cure53 and other contributors,\n  used under the Apache License 2.0 (dual-licensed Apache-2.0 / MPL-2.0).\n  Full text: http://www.apache.org/licenses/LICENSE-2.0';
 const markedLicense = fs.readFileSync(path.join(__dirname, '..', 'node_modules', 'marked', 'LICENSE'), 'utf8').replace(/--/g, '- -');
 const ownLicense = fs.readFileSync(path.join(__dirname, '..', 'LICENSE'), 'utf8').replace(/--/g, '- -');
-html = html.replace('<head>', () => `<head>\n<!--\n  Crucible ${pkg.version}: a free manuscript editor.\n\n${ownLicense.replace(/^/gm, '  ')}\n\n  ===========================================================================\n\n  Includes marked (https://github.com/markedjs/marked):\n${markedLicense.replace(/^/gm, '  ')}\n\n  Includes ${purifyNotice}\n-->`);
+const lameNotice = 'lamejs 1.2.1 (https://github.com/zhuker/lamejs), a port of LAME (https://lame.sourceforge.io),\n  used unmodified under the GNU LGPL 3.0 (https://www.gnu.org/licenses/lgpl-3.0.html) for MP3\n  audiobook export. It is the separate script block marked vendor/lame.min.js and may be replaced.';
+html = html.replace('<head>', () => `<head>\n<!--\n  Crucible ${pkg.version}: a free manuscript editor.\n\n${ownLicense.replace(/^/gm, '  ')}\n\n  ===========================================================================\n\n  Includes marked (https://github.com/markedjs/marked):\n${markedLicense.replace(/^/gm, '  ')}\n\n  Includes ${purifyNotice}\n\n  Includes ${lameNotice}\n-->`);
 
 // Only Crucible's own scripts may run: each one is allowed by its exact
 // fingerprint (SHA-256), so any script that found its way into the page,

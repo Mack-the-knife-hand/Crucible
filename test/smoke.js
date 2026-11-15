@@ -19,6 +19,8 @@ const FIX = process.env.CRUCIBLE_FIXTURES; // folder with test.png + test.mp3 (o
 fs.mkdirSync(OUT, { recursive: true });
 app.setPath('userData', path.join(TMP, 'userData'));
 global.__crucibleTestUserData = true;
+// A pretend microphone and camera, so the permission rules can be tested.
+app.commandLine.appendSwitch('use-fake-device-for-media-stream');
 
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${extra ? '  — ' + extra : ''}`); };
@@ -46,11 +48,28 @@ Cross arrived on a Tuesday, which nobody in Oakvale would remember later.
 
 // ---------- fake OpenAI-compatible AI server
 let lastRequest = null;
+const ttsSeen = [];
 const beacons = [];
 const server = http.createServer((req, res) => {
   // Anything a hostile manuscript tries to fetch lands here (and is counted).
   // A server that redirects AI requests to another address.
   if (req.url.startsWith('/redirect/')) { res.writeHead(307, { location: `http://127.0.0.1:${server.address().port}/stolen` }); res.end(); return; }
+  // Fake Gemini TTS for the Audiobook studio.
+  if (req.url.startsWith('/v1beta/')) {
+    let b = '';
+    req.on('data', (c) => (b += c));
+    req.on('end', () => {
+      ttsSeen.push({ url: req.url, key: req.headers['x-goog-api-key'], body: b });
+      if (req.url.startsWith('/v1beta/voices')) { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ voices: [{ id: 'voice_finch', display_name: 'Alistair Finch 1', type: 'prompted' }] })); }
+      const n = 4800, w = Buffer.alloc(44 + n * 2);
+      w.write('RIFF', 0); w.writeUInt32LE(36 + n * 2, 4); w.write('WAVE', 8); w.write('fmt ', 12); w.writeUInt32LE(16, 16); w.writeUInt16LE(1, 20); w.writeUInt16LE(1, 22);
+      w.writeUInt32LE(24000, 24); w.writeUInt32LE(48000, 28); w.writeUInt16LE(2, 32); w.writeUInt16LE(16, 34); w.write('data', 36); w.writeUInt32LE(n * 2, 40);
+      for (let i = 0; i < n; i++) w.writeInt16LE(Math.round(Math.sin(i / 8) * 8000), 44 + i * 2);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ steps: [{ type: 'model_output', content: [{ type: 'audio', mime_type: 'audio/wav', data: w.toString('base64') }] }] }));
+    });
+    return;
+  }
   if (!req.url.startsWith('/v1/') && !req.url.startsWith('/strict/')) { beacons.push(req.url); res.writeHead(200, { 'content-type': 'image/png' }); res.end(); return; }
   let body = '';
   req.on('data', (c) => (body += c));
@@ -428,6 +447,39 @@ print(json.dumps({'bad': z.testzip(), 'names': z.namelist(), 'key': s['providers
   await js(`window.crucible.saveSettings({ providers: [{ id: 'fake1', name: 'Fake local AI', type: 'openai', baseUrl: 'http://127.0.0.1:${port}/v1', model: 'test-model', newApiKey: 'sk-test' }], activeProviderId: 'fake1' })`);
   const sres = await js(`window.crucible.getSettings().then((s) => window.crucible.saveSettings({ providers: s.providers.map((p) => ({ ...p, baseUrl: 'https://attacker.example/v1' })) }))`);
   check('Security: changing an AI\'s address drops its saved key', sres.providers.every((p) => !p.hasKey), JSON.stringify(sres.providers.map((p) => p.hasKey)));
+
+  // ---- Audiobook studio, desktop edition: voices go through the main
+  // process with the stored key; clip and export files stay with the book.
+  await js(`window.crucible.getSettings().then((s) => window.crucible.saveSettings({ providers: [...s.providers, { id: 'tts1', name: 'Gemini TTS', type: 'gemini-tts', baseUrl: 'http://127.0.0.1:${port}/v1beta', model: 'gemini-3.8-flash-tts', newApiKey: 'g-desk-key' }] }))`);
+  const vo = await js(`window.crucible.listVoices({ providerId: 'tts1' })`);
+  check('Audiobook: voice list through the main process', vo.ok && vo.voices[0]?.id === 'voice_finch', JSON.stringify(vo));
+  const sp = await js(`window.crucible.tts({ providerId: 'tts1', text: 'Duw, Mack.', voice: 'voice_finch', style: 'warm' }).then((r) => ({ ok: r.ok, ext: r.ext, len: r.data?.length, riff: r.data ? String.fromCharCode(...r.data.slice(0, 4)) : '', error: r.error }))`);
+  const lastTts = ttsSeen.at(-1);
+  check('Audiobook: speech comes back as a WAV clip', sp.ok && sp.ext === 'wav' && sp.riff === 'RIFF' && sp.len > 9000, JSON.stringify(sp));
+  check('Audiobook: stored key sent only in the header', lastTts?.key === 'g-desk-key' && !lastTts.body.includes('g-desk-key') && JSON.parse(lastTts.body).generation_config.speech_config[0].voice === 'voice_finch');
+  const notVoice = await js(`window.crucible.aiChat({ providerId: 'tts1', system: 's', messages: [{ role: 'user', content: 'hi' }] })`);
+  check('Audiobook: a voice service is refused as a writing AI', !notVoice.ok && /voice service/.test(notVoice.error), notVoice.error);
+  const wr = await js(`window.crucible.tts({ providerId: 'tts1', text: 'Line.', voice: 'Kore' }).then(async (r) => {
+    await window.crucible.writeBookAudio({ bookPath: S.path, name: 'clip1-a.wav', data: r.data });
+    const back = await window.crucible.readBookAudio({ bookPath: S.path, name: 'clip1-a.wav' });
+    const list = await window.crucible.listBookAudio({ bookPath: S.path });
+    let bad = '';
+    try { await window.crucible.writeBookAudio({ bookPath: S.path, name: '../../evil.wav', data: r.data }); } catch (e) { bad = e.message; }
+    const f = await window.crucible.audiobookBegin({ bookPath: S.path, name: '01 - Chapter One: Dust.mp3' });
+    await window.crucible.audiobookWrite({ token: f.token, data: new Uint8Array([0xff, 0xfb, 1, 2, 3]) });
+    const end = await window.crucible.audiobookEnd({ token: f.token });
+    await window.crucible.deleteBookAudio({ bookPath: S.path, name: 'clip1-a.wav' });
+    return { same: back && back.length === r.data.length, list, bad, end: end.path, after: await window.crucible.listBookAudio({ bookPath: S.path }) };
+  })`);
+  check('Audiobook: clip saved in the book\'s .crucible/audio folder', wr.same && wr.list.includes('clip1-a.wav') && fs.existsSync(path.join(TMP, 'Oakvale Test.crucible', 'audio', 'clip1-a.wav')) === false && wr.after.length === 0, JSON.stringify(wr));
+  check('Audiobook: odd clip names refused', /Bad audio file name/.test(wr.bad), wr.bad);
+  const abFile = wr.end || '';
+  check('Audiobook: export written beside the book', path.basename(abFile) === '01 - Chapter One Dust.mp3' && path.basename(path.dirname(abFile)) === 'Oakvale Test audiobook' && fs.existsSync(abFile) && fs.readFileSync(abFile).length === 5, abFile);
+  const perm = await js(`(async () => {
+    const tryIt = async (c) => { try { const s = await navigator.mediaDevices.getUserMedia(c); s.getTracks().forEach((t) => t.stop()); return 'granted'; } catch (e) { return e.name; } };
+    return { mic: await tryIt({ audio: true }), cam: await tryIt({ video: true }) };
+  })()`);
+  check('Audiobook: microphone may be asked for, camera never', perm.mic !== 'NotAllowedError' && perm.cam === 'NotAllowedError', JSON.stringify(perm));
 
 }
 

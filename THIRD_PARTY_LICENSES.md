@@ -270,3 +270,18 @@ Dual-licensed under the Apache License 2.0 and the Mozilla Public License 2.0; C
    limitations under the License.
 
 ```
+
+## lamejs (MP3 encoder for audiobook export)
+
+Crucible includes lamejs 1.2.1 (https://github.com/zhuker/lamejs), a JavaScript
+port of the LAME MP3 encoder (https://lame.sourceforge.io). It is used only by
+the Audiobook studio's MP3 export.
+
+lamejs and LAME are licensed under the GNU Lesser General Public License,
+version 3 (LGPL-3.0): https://www.gnu.org/licenses/lgpl-3.0.html
+
+lamejs is shipped unmodified, as its own file (`src/vendor/lame.min.js`) in the
+desktop edition and as its own clearly marked `<script>` block in the browser
+edition's single `crucible.html`. You may replace it with another build of
+lamejs; source code is available from the project linked above. The LGPL
+applies to lamejs only, not to the rest of Crucible.

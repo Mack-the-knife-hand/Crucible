@@ -150,6 +150,7 @@
         <button data-tab="ai" class="on">AI desk</button>
         <button data-tab="prose" title="Correct prose across a selection, chapter or the whole book">Prose pass <span class="badge" id="proseBadge">0</span></button>
         <button data-tab="memory">Story memory <span class="badge" id="memBadge">0</span></button>
+        <button data-tab="audio" title="Audiobook studio: cast voices, voice passages, export the audiobook">Audio</button>
         <span class="spacer"></span>
         <button class="collapse-btn" data-panel="right" title="Hide this panel (Ctrl+])">»</button>
       </nav>
@@ -158,6 +159,7 @@
         <button class="rail-tab" data-panel="right" data-tab="ai">AI desk</button>
         <button class="rail-tab" data-panel="right" data-tab="prose">Prose <span class="badge" data-mirror="proseBadge">0</span></button>
         <button class="rail-tab" data-panel="right" data-tab="memory">Memory <span class="badge" data-mirror="memBadge">0</span></button>
+        <button class="rail-tab" data-panel="right" data-tab="audio">Audio</button>
       </div>
       <section class="tab on" data-tab="ai">
         <div id="aiContext"></div>
@@ -221,6 +223,38 @@
         <div id="memMeter"></div>
         <div id="memList" class="list"></div>
       </section>
+      <section class="tab" data-tab="audio">
+        <div class="au-scroll">
+          <div class="au-head"><strong>Cast</strong><span class="spacer"></span>
+            <button class="small" id="auAddActor" title="Add a character voice">+ Actor</button></div>
+          <div id="auActors"></div>
+
+          <div class="au-head"><strong>Voice a passage</strong></div>
+          <div class="au-box">
+            <div id="auSelInfo" class="muted small">Select a passage in the manuscript.</div>
+            <div class="prow"><label for="auActorPick">Actor</label><select id="auActorPick"></select></div>
+            <label class="check small" title="Normally words in quotation marks go to this actor and the rest to the Narrator. Tick to give this actor everything you selected (a letter, a song, a radio broadcast)."><input type="checkbox" id="auWhole"> Whole selection to this actor</label>
+            <div class="prow"><span class="spacer"></span><button id="auVoice" class="accent small" disabled>🎙 Voice selection</button></div>
+            <div id="auProgress" class="hidden">
+              <div class="au-barwrap"><div class="au-bar" id="auBar"></div></div>
+              <div class="prow"><span id="auProgText" class="muted small"></span><span class="spacer"></span><button class="small ghost" id="auCancel">Stop</button></div>
+            </div>
+          </div>
+
+          <div class="au-head"><strong id="auChapter">This chapter</strong><span class="spacer"></span>
+            <button class="small" id="auPlayFrom" title="Play the finished clips from the cursor to the end of the chapter">▶ Play from cursor</button>
+            <button class="small hidden" id="auStop">■ Stop</button></div>
+          <div class="prow"><span id="auTotals" class="muted small"></span><span class="spacer"></span><button class="small hidden" id="auStale"></button></div>
+          <div id="auClips"></div>
+
+          <div class="au-head"><strong>Finish</strong></div>
+          <div class="au-box">
+            <div class="prow"><button class="small" id="auLexicon" title="Words the voices should say differently from how they're spelled">Pronunciation list (<span id="auLexCount">0</span>)</button>
+              <span class="spacer"></span><button class="small accent" id="auExport">Export audiobook…</button></div>
+            <label class="check small"><input type="checkbox" id="auUnderline" checked> Underline voiced text</label>
+          </div>
+        </div>
+      </section>
     </aside>
   </main>
 
@@ -280,6 +314,8 @@
   <script src="vendor/marked.umd.js"></script>
   <script src="vendor/purify.min.js"></script>
   <script src="js/settings-core.js"></script>
+  <script src="js/audioscript.js"></script>
+  <script src="vendor/lame.min.js"></script>
   <script src="js/zip.js"></script>
   <script src="js/util.js"></script>
   <script src="js/platform-web.js"></script>
@@ -296,6 +332,7 @@
   <script src="js/notes.js"></script>
   <script src="js/highlights.js"></script>
   <script src="js/speech.js"></script>
+  <script src="js/audiobook.js"></script>
   <script src="js/goals.js"></script>
   <script src="js/beta.js"></script>
   <script src="js/dataimport.js"></script>
