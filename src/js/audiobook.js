@@ -296,8 +296,14 @@ const Audiobook = {
     const chosen = this.actor($('#auActorPick').value);
     if (!chosen) return toast('Add an actor first.', true);
     const narrator = this.narrator();
-    const whole = $('#auWhole').checked || chosen.narrator;
-    const segs = AudioScript.segment(Editor.text, s.start, s.end, { split: !whole });
+    let whole = $('#auWhole').checked || chosen.narrator;
+    let segs = AudioScript.segment(Editor.text, s.start, s.end, { split: !whole });
+    // No quoted speech in the selection: the chosen actor obviously means to
+    // read all of it, rather than handing it to the Narrator.
+    if (!whole && segs.length && !segs.some((g) => g.kind === 'dialogue')) {
+      whole = true;
+      segs = AudioScript.segment(Editor.text, s.start, s.end, { split: false });
+    }
     if (!segs.length) return toast('Nothing to read there.');
     if (!whole && !narrator && segs.some((g) => g.kind === 'narration')) {
       return toast('Add a Narrator actor first: they read everything outside quotation marks. (Or tick "Whole selection".)', true, 6000);
@@ -764,7 +770,7 @@ const Recorder = {
     const line = el('div', { class: 'rec-line' });
     const meter = el('div', { class: 'rec-meter' }, el('div', { class: 'rec-level' }));
     const status = el('div', { class: 'muted small' });
-    const btnRec = el('button', { class: 'accent' }, '● Record');
+    const btnRec = el('button', { class: 'accent', title: 'Space' }, '● Record');
     const btnPlay = el('button', { disabled: true }, '▶ Play take');
     const btnKeep = el('button', { disabled: true }, '✓ Keep & next');
     const btnSkip = el('button', { class: 'ghost' }, 'Skip');
@@ -787,7 +793,7 @@ const Recorder = {
       line.textContent = AudioScript.clean(Editor.text.slice(c.start, c.end));
       Editor.reveal(c.start, c.end, false);
       take = null; btnPlay.disabled = true; btnKeep.disabled = true;
-      status.textContent = 'Press Record, read the line, press Stop. Keep the meter out of the red.';
+      status.textContent = 'Space: record / stop · Enter: keep & next · P: play take · Esc: finish. Keep the meter out of the red.';
     };
     btnRec.onclick = () => {
       if (rec && rec.state === 'recording') { rec.stop(); return; }
@@ -801,7 +807,7 @@ const Recorder = {
         status.textContent = 'Play it back. Keep it, or record again.';
       };
       rec.start();
-      btnRec.textContent = '■ Stop';
+      btnRec.textContent = '■ Stop (Space)';
       status.textContent = 'Recording…';
     };
     btnPlay.onclick = () => take && Audiobook.playBytes(take, ext);
@@ -813,8 +819,20 @@ const Recorder = {
       i++; btnRec.textContent = '● Record'; show();
     };
     btnSkip.onclick = () => { i++; btnRec.textContent = '● Record'; show(); };
+    // Hands stay on the keyboard: Space starts and stops a take.
+    const keys = (e) => {
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      const k = e.key;
+      const act = k === ' ' ? btnRec : k === 'Enter' ? btnKeep : (k === 'p' || k === 'P') ? btnPlay : null;
+      if (!act) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.repeat || act.disabled) return;
+      act.click();
+    };
+    document.addEventListener('keydown', keys, true);
     let m;
     const done = () => {
+      document.removeEventListener('keydown', keys, true);
       cancelAnimationFrame(raf);
       try { if (rec && rec.state === 'recording') rec.stop(); } catch { /* stopped */ }
       stream.getTracks().forEach((t) => t.stop());
@@ -827,7 +845,7 @@ const Recorder = {
       title: 'Record your lines', cls: 'rec-modal',
       body: el('div', {}, who, line, meter, el('div', { class: 'rec-btns' }, btnRec, btnPlay, btnKeep, btnSkip), status),
       buttons: [{ label: 'Finish', onClick: () => { done(); } }],
-      onClose: () => { cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close().catch(() => {}); },
+      onClose: () => { document.removeEventListener('keydown', keys, true); cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close().catch(() => {}); },
     });
     show();
   },

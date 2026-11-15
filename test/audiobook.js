@@ -264,6 +264,27 @@ const LIST = async (parts) => {
     // The rest of that selection (narration) went to the narrator's AI voice.
     check('Narration around it still voiced by the Narrator', (await js(() => Audiobook.data().clips.length)) === 5);
     if (await page.isVisible('.rec-modal')) await page.click('.modal footer button:has-text("Finish")');
+    await wait(300);
+
+    section('Record narration yourself, with the keyboard');
+    const nline = 'Judy locked the front door behind them.';
+    await js((t) => { const a = Editor.text.indexOf(t); Editor.ta.focus(); Editor.ta.setSelectionRange(a, a + t.length); Audiobook.renderSelection(); }, nline);
+    await page.selectOption('#auActorPick', meId);
+    await page.click('#auVoice');
+    await wait(300);
+    if (await page.isVisible('.modal footer button:has-text("Replace")')) await page.click('.modal footer button:has-text("Replace")');
+    await page.waitForSelector('.rec-modal');
+    check('A selection with no quotes goes to the chosen actor (recorder opens)', (await page.textContent('.rec-line')).includes('Judy locked the front door'));
+    await page.keyboard.press(' ');
+    await wait(900);
+    check('Space starts a take', (await page.textContent('.rec-btns')).includes('Stop'));
+    await page.keyboard.press(' ');
+    await page.waitForSelector('.rec-btns button:has-text("Keep"):not([disabled])');
+    await page.keyboard.press('Enter');
+    await wait(600);
+    const mine = await js((args) => Audiobook.data().clips.filter((c) => c.actorId === args[0] && Editor.text.slice(c.start, c.end).includes(args[1])).map((c) => c.status), [meId, nline]);
+    check('Space stops, Enter keeps the take', mine.length === 1 && mine[0] === 'ok', JSON.stringify(mine));
+    if (await page.isVisible('.rec-modal')) await page.click('.modal footer button:has-text("Finish")');
 
     section('Save keeps the cast and clips');
     await js(() => App.save());
@@ -273,7 +294,7 @@ const LIST = async (parts) => {
       for (const n of ['Drive', 'Books', 'Oakvale', 'Oakvale Test.crucible']) d = await d.getDirectoryHandle(n);
       return (await (await d.getFileHandle('project.json')).getFile()).text();
     }));
-    check('project.json has actors, clips and pronunciation list', pj.audio?.actors.length === 3 && pj.audio.clips.length === 5 && pj.audio.lexicon.length === 2);
+    check('project.json has actors, clips and pronunciation list', pj.audio?.actors.length === 3 && pj.audio.clips.length === (await js(() => Audiobook.data().clips.length)) && pj.audio.clips.length >= 5 && pj.audio.lexicon.length === 2);
 
     section('Export');
     await js(() => { Editor.ta.setSelectionRange(0, 0); Audiobook.renderClips(); });
