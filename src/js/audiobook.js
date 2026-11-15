@@ -187,23 +187,27 @@ const Audiobook = {
     engine.value = x.engine;
     const prov = el('select');
     const provs = this.voiceProviders();
-    if (!provs.length) prov.append(el('option', { value: '' }, 'Add a voice service in Settings ⚙ first'));
+    if (!provs.length) prov.append(el('option', { value: '' }, 'No voice service yet. In Settings ⚙ use "+ Add an AI or voice service…" → Gemini TTS'));
     for (const p of provs) {
       const kind = p.type === 'elevenlabs' ? 'ElevenLabs' : 'Gemini TTS';
       prov.append(el('option', { value: p.id }, p.name.toLowerCase().includes(kind.split(' ')[0].toLowerCase()) ? p.name : `${p.name} (${kind})`));
     }
     prov.value = x.providerId || provs[0]?.id || '';
-    const voice = el('input', { value: x.voice, placeholder: 'Voice name or ID, e.g. Kore or voice_abc123', list: 'auVoiceList' });
-    const voiceList = el('datalist', { id: 'auVoiceList' });
+    const voice = el('input', { value: x.voice, placeholder: 'Voice name or ID, e.g. Kore or voice_abc123' });
+    const voiceList = el('select', { id: 'auVoiceList', style: 'display:none;margin-top:4px;width:100%' });
+    voiceList.onchange = () => { if (voiceList.value) voice.value = voiceList.value; };
     const voiceMsg = el('span', { class: 'muted small' });
     const loadVoices = el('button', {
       class: 'small', onclick: async () => {
         voiceMsg.textContent = 'Loading…';
         const r = await window.crucible.listVoices({ providerId: prov.value });
         voiceList.innerHTML = '';
-        if (!r.ok) { voiceMsg.textContent = `✕ ${snippet(r.error, 90)}`; return; }
-        r.voices.forEach((v) => voiceList.append(el('option', { value: v.id }, `${v.name}${v.type ? ' · ' + v.type : ''}`)));
-        voiceMsg.textContent = `${r.voices.length} voices. Click the voice box to choose.`;
+        if (!r.ok) { voiceList.style.display = 'none'; voiceMsg.textContent = `✕ ${snippet(r.error, 90)}`; return; }
+        voiceList.append(el('option', { value: '' }, `Choose a voice (${r.voices.length})…`));
+        r.voices.forEach((v) => voiceList.append(el('option', { value: v.id }, `${v.name}${v.type ? ' · ' + v.type : ''}${v.name !== v.id ? '  [' + v.id + ']' : ''}`)));
+        voiceList.value = r.voices.some((v) => v.id === voice.value.trim()) ? voice.value.trim() : '';
+        voiceList.style.display = '';
+        voiceMsg.textContent = 'Pick one from the list below, then ▶ Test voice.';
       },
     }, 'Load my voices');
     const style = el('textarea', { rows: 3, placeholder: 'How this character talks, e.g. Warm South Wales lilt, mid-low baritone, unhurried, dry humour.' });
@@ -344,7 +348,7 @@ const Audiobook = {
     if (!this.voiceProviders().some((p) => p.id === x.providerId)) {
       const vp = this.voiceProviders();
       if (vp.length === 1) { x.providerId = vp[0].id; markDirty(true); this.renderActors(); }
-      else throw new Error(vp.length ? `Choose a voice service for ${x.name}: press ✎ next to ${x.name} in the Cast list.` : 'Add a voice service in Settings first (+ Add an AI or voice service…).');
+      else throw new Error(vp.length ? `Choose a voice service for ${x.name}: press ✎ next to ${x.name} in the Cast list.` : 'Add a voice service first: Settings ⚙ → "+ Add an AI or voice service…" → Gemini TTS (audiobook voices).');
     }
     const text = AudioScript.spoken(Editor.text.slice(c.start, c.end), this.data().lexicon);
     if (!text) throw new Error('Nothing to say in this clip.');

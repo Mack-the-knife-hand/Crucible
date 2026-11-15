@@ -178,8 +178,10 @@ const LIST = async (parts) => {
     await wait(200);
     await page.fill('.modal input[placeholder^="Character name"]', 'Alistair Finch');
     await page.click('.modal button:has-text("Load my voices")');
-    await until(() => document.querySelector('#auVoiceList')?.options.length === 2);
-    check('Load my voices lists designed and prebuilt voices', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).join())) === 'voice_finch,Kore');
+    await until(() => document.querySelector('#auVoiceList')?.options.length === 3);
+    check('Load my voices lists designed and prebuilt voices', (await js(() => [...document.querySelectorAll('#auVoiceList option')].map((o) => o.value).filter(Boolean).join())) === 'voice_finch,Kore');
+    await page.selectOption('#auVoiceList', 'Kore');
+    check('Picking from the voice list fills the voice box', (await js(() => document.querySelector('.modal input[placeholder^="Voice name"]').value)) === 'Kore');
     await page.fill('.modal input[placeholder^="Voice name"]', 'voice_finch');
     await page.click('.modal footer button.accent');
     await wait(200);
