@@ -323,6 +323,8 @@ const LIST = async (parts) => {
     await page.click('.modal footer button:has-text("Close")');
     await js(() => App.save());
     await wait(400);
+    check('Library voice names (e.g. ar-eg-storyteller-10) are accepted', await js(() => Audiobook.voiceProblem({ name: 'N', engine: 'tts', providerId: 'g1', voice: 'ar-eg-storyteller-10' }) === null));
+    check('A character name in the Voice box is still caught', await js(() => !!Audiobook.voiceProblem({ name: 'N', engine: 'tts', providerId: 'g1', voice: 'Judy Miller' })));
     section('Settings');
     await js(async () => {
       const cur = await window.crucible.getSettings();

@@ -50,8 +50,8 @@ const Audiobook = {
     const vprov = this.voiceProviders().find((p) => p.id === x.providerId);
     const v = (x.voice || '').trim();
     if (!v) return `${x.name} has no voice chosen. Press ✎ next to ${x.name}, then Load my voices and pick one.`;
-    if (vprov && vprov.type === 'gemini-tts' && !/^voice(key)?_[\w-]+$|^[A-Za-z]+$/.test(v)) {
-      return `"${v}" isn't a Gemini voice name. Press ✎ next to ${x.name}, then Load my voices and pick one (e.g. Kore) or your designed voice_… ID.`;
+    if (vprov && vprov.type === 'gemini-tts' && !/^[\w.:-]+$/.test(v)) {
+      return `"${v}" isn't a Gemini voice name (voice names have no spaces). Press ✎ next to ${x.name}, then Load my voices and pick one.`;
     }
     return null;
   },
